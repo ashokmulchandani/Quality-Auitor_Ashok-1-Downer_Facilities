@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Downer Quality Assurance — Interview War Room</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #141b22;
+    --surface2: #1c2530;
+    --border: #2a3544;
+    --text: #c8d6e5;
+    --text2: #8899aa;
+    --accent: #4d9de0;
+    --accent2: #1F4E79;
+    --red: #e63946;
+    --orange: #f4a261;
+    --green: #2a9d8f;
+    --yellow: #e9c46a;
+    --header-bg: #141b22;
+    --shadow: rgba(0,0,0,0.3);
+    --heading: #ffffff;
+    --card-hover: rgba(77,157,224,0.08);
+  }
+  [data-theme="light"] {
+    --bg: #f4f6f9;
+    --surface: #ffffff;
+    --surface2: #eef1f5;
+    --border: #d1d9e0;
+    --text: #1a1f2e;
+    --text2: #5a6477;
+    --accent: #1F4E79;
+    --accent2: #16395a;
+    --red: #c92a2a;
+    --orange: #d97706;
+    --green: #0d7d6e;
+    --yellow: #b8860b;
+    --header-bg: #ffffff;
+    --shadow: rgba(0,0,0,0.08);
+    --heading: #111827;
+    --card-hover: rgba(31,78,121,0.04);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    transition: background 0.3s, color 0.3s;
+  }
+  header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 8px var(--shadow);
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; color: var(--heading); letter-spacing: -0.3px; }
+  header h1 span { color: var(--accent); }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-urgent { background: var(--red); color: #ffffff; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button {
+    background: transparent; border: 1px solid var(--border); color: var(--text2);
+    padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  nav button:hover { border-color: var(--accent); color: var(--text); }
+  nav button.active { background: var(--accent2); border-color: var(--accent); color: #ffffff; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .panel-intro { color: var(--text2); font-size: 0.9rem; margin-bottom: 20px; max-width: 72ch; }
+  .panel-intro b { color: var(--text); }
+
+  /* FLASHCARD */
+  .flashcard-container { perspective: 1000px; max-width: 760px; margin: 0 auto; }
+  .flashcard {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 40px 36px; min-height: 380px; cursor: pointer;
+    transition: border-color 0.2s; display: flex; flex-direction: column;
+    justify-content: flex-start; align-items: center; text-align: center;
+    overflow-y: auto; max-height: 70vh;
+  }
+  .flashcard:hover { border-color: var(--accent); }
+  .interviewer-tag { font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+  .q-text { font-size: 1.18rem; color: var(--heading); line-height: 1.45; max-width: 58ch; }
+  .card-back { text-align: left; width: 100%; }
+  .card-back h3 { color: var(--accent); margin-bottom: 12px; font-size: 0.95rem; }
+  .card-back .answer-body { font-size: 0.95rem; color: var(--text); line-height: 1.65; white-space: pre-line; }
+  .card-back .why {
+    margin-top: 16px; padding: 12px 14px; background: var(--surface2); border-radius: 8px;
+    font-size: 0.85rem; color: var(--accent); border-left: 3px solid var(--accent);
+  }
+  .card-controls { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .card-controls button {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s;
+  }
+  .card-controls button:hover { background: var(--accent2); border-color: var(--accent); }
+  .card-controls button.primary { background: var(--accent2); border-color: var(--accent); font-weight: 600; }
+  .card-counter { text-align: center; margin-top: 12px; color: var(--text2); font-size: 0.8rem; }
+  .filter-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-chip {
+    padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--text2); transition: all 0.15s;
+  }
+  .filter-chip.active { background: var(--accent2); border-color: var(--accent); color: #ffffff; }
+  .filter-chip:hover { border-color: var(--accent); }
+
+  /* GRIDS */
+  .gap-grid, .interviewer-grid, .cheat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;
+  }
+  .gap-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    transition: all 0.15s;
+  }
+  .gap-card:hover { border-color: var(--accent); }
+  .gap-card.critical { border-left: 4px solid var(--red); }
+  .gap-card.major { border-left: 4px solid var(--orange); }
+  .gap-card.moderate { border-left: 4px solid var(--yellow); }
+  .gap-card.strength { border-left: 4px solid var(--green); }
+  .gap-card h3 { font-size: 0.95rem; color: var(--heading); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .risk-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; text-transform: uppercase; }
+  .risk-critical { background: rgba(230,57,70,0.2); color: var(--red); }
+  .risk-major { background: rgba(244,162,97,0.2); color: var(--orange); }
+  .risk-moderate { background: rgba(233,196,106,0.2); color: var(--yellow); }
+  .risk-strength { background: rgba(42,157,143,0.2); color: var(--green); }
+  .gap-card p { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+  .gap-card .fix { margin-top: 10px; padding: 8px 12px; background: var(--surface2); border-radius: 6px; font-size: 0.8rem; color: var(--accent); }
+
+  /* INTERVIEWER CARDS */
+  .interviewer-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .interviewer-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .interviewer-card.expanded { border-color: var(--accent); }
+  .interviewer-card h3 { color: var(--heading); font-size: 1.1rem; }
+  .interviewer-card .role { color: var(--accent); font-size: 0.85rem; margin: 4px 0; }
+  .interviewer-card .stats { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+  .interviewer-card .stat { text-align: center; }
+  .interviewer-card .stat-val { font-size: 1.1rem; font-weight: 700; color: var(--heading); }
+  .interviewer-card .stat-label { font-size: 0.7rem; color: var(--text2); }
+  .interviewer-card .detail { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .interviewer-card.expanded .detail { display: block; }
+  .interviewer-card .detail h4 { color: var(--accent); font-size: 0.85rem; margin: 12px 0 6px; }
+  .interviewer-card .detail ul { list-style: none; }
+  .interviewer-card .detail ul li { font-size: 0.82rem; color: var(--text2); padding: 3px 0; }
+  .interviewer-card .detail ul li::before { content: "• "; color: var(--accent); }
+  .interviewer-card .detail .ask { color: var(--green); }
+  .interviewer-card .detail .ask li::before { content: "❓ "; color: var(--green); }
+
+  /* PRACTICE MODE */
+  .practice-area { max-width: 700px; margin: 0 auto; text-align: center; }
+  .practice-timer {
+    font-size: 2.6rem; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; margin: 20px 0;
+  }
+  .practice-question {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 36px 28px; margin: 20px 0; font-size: 1.1rem; color: var(--heading); line-height: 1.5;
+  }
+  .practice-question .q-meta { font-size: 0.8rem; color: var(--accent); margin-bottom: 12px; }
+  .practice-answer {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; text-align: left; font-size: 0.92rem; color: var(--text); line-height: 1.65;
+    margin: 16px 0; white-space: pre-line; display: none;
+  }
+  .practice-answer.visible { display: block; }
+
+  /* CHEAT SHEET */
+  .cheat-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .cheat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .cheat-box h3 { color: var(--heading); font-size: 0.9rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .cheat-box h3 .icon { font-size: 1.2rem; }
+  .cheat-box ul { list-style: none; }
+  .cheat-box ul li { font-size: 0.82rem; color: var(--text2); padding: 3px 0; }
+  .cheat-box ul li strong { color: var(--text); }
+  .dont-say { color: var(--red) !important; }
+  .do-say { color: var(--green) !important; }
+
+  .themeToggle { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.15s; }
+  .themeToggle:hover { border-color: var(--accent); }
+
+  /* ROLE RECON */
+  .cmp { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 16px 0; }
+  .cmp th, .cmp td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .cmp th { color: var(--accent); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; background: var(--surface2); }
+  .cmp td { color: var(--text2); line-height: 1.55; }
+  .cmp td b { color: var(--text); }
+  .cmp tr:last-child td { border-bottom: none; }
+  .win { color: var(--green); font-weight: 600; }
+  .gap-warn { color: var(--orange); font-weight: 600; }
+  .pro-asked { border-left: 3px solid var(--accent); padding-left: 10px; margin: 10px 0; font-size: 0.85rem; color: var(--text2); }
+  .pro-asked b { color: var(--text); }
+  .pro-asked .why { font-size: 0.78rem; color: var(--accent); }
+
+  @media (max-width: 600px) {
+    header { padding: 12px; }
+    header h1 { font-size: 1rem; }
+    nav button { padding: 6px 10px; font-size: 0.72rem; }
+    main { padding: 12px; }
+    .flashcard { padding: 24px 18px; min-height: 300px; }
+    .gap-grid, .interviewer-grid, .cheat-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 Downer <span>Quality Assurance</span> — Interview War Room</h1>
+  <span class="badge badge-urgent">Sydney NSW · Homes NSW Contract · QA Coordinator / Quality Auditor</span>
+  <nav id="mainNav">
+    <button class="active" data-panel="flashcards">🎴 Flashcards</button>
+    <button data-panel="company">🏢 Company Intel</button>
+    <button data-panel="interviewers">👥 The Panel</button>
+    <button data-panel="predecessor">🕵️ Role Recon</button>
+    <button data-panel="practice">🎯 Practice Mode</button>
+    <button data-panel="redflags">🚩 Red Flags</button>
+    <button data-panel="askthem">❓ Questions to Ask</button>
+  </nav>
+  <button class="themeToggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
+</header>
+
+<main>
+
+<!-- ==================== FLASHCARDS ==================== -->
+<div id="flashcards" class="panel active">
+  <p class="panel-intro">20 questions with model answers, built from <b>your</b> resume numbers and the two role documents (SEEK ad + internal PD) — nothing unsubstantiated. Click the card to flip; filter by who's asking.</p>
+  <div class="filter-row" id="flashcardFilters">
+    <button class="filter-chip active" data-filter="all">All (20)</button>
+    <button class="filter-chip" data-filter="QA Manager">📋 QA Manager — coordination (6)</button>
+    <button class="filter-chip" data-filter="SDP">🛠️ SDP / Field — auditing (6)</button>
+    <button class="filter-chip" data-filter="Zero Harm">🦺 Zero Harm — WHS (3)</button>
+    <button class="filter-chip" data-filter="HR">🤝 HR — behavioural (5)</button>
+  </div>
+  <div class="flashcard-container">
+    <div class="flashcard" id="flashcard">
+      <div class="card-front" id="cardFront"></div>
+      <div class="card-back" id="cardBack" style="display:none"></div>
+    </div>
+  </div>
+  <div class="card-controls">
+    <button id="prevBtn">◀ Previous</button>
+    <button class="primary" id="flipBtn">🔄 Flip Card</button>
+    <button id="nextBtn">Next ▶</button>
+    <button id="randBtn">🎲 Random</button>
+  </div>
+  <div class="card-counter" id="cardCounter">Card 1 / 20</div>
+</div>
+
+<!-- ==================== COMPANY INTEL ==================== -->
+<div id="company" class="panel">
+  <p class="panel-intro">The role sits inside the <b>Homes NSW maintenance contract</b> — Downer's $860M social-housing portfolio. Commit these to memory; drop 2–3 naturally in conversation.</p>
+  <div class="gap-grid">
+    <div class="gap-card strength"><h3>🏗️ Downer Group (ASX: DOW)</h3><p>One of Australia &amp; NZ's largest integrated services providers — plans, creates and sustains essential infrastructure: hospitals, data centres, defence partnerships. 26,000+ people across Australia, NZ and the Pacific. Purpose: <b>"enabling communities to thrive."</b></p></div>
+    <div class="gap-card strength"><h3>🏠 The Homes NSW contract — $860M</h3><p>Awarded June 2024, commenced 1 July 2024. <b>Contract areas 9, 12 &amp; 13</b>: Inner City Sydney, Southern Tablelands, South Coast, Macarthur/Southern Highlands, Illawarra — roughly <b>24,000 dwellings</b>. Scope: responsive maintenance, capital upgrades, vacant restorations, home modifications, lawns/grounds/cleaning. Max 10-year term.</p></div>
+    <div class="gap-card strength"><h3>🤝 20+ year partnership with LAHC</h3><p>CEO Peter Tompkins publicly framed the award as a 20+ year partnership with the NSW Land &amp; Housing Corporation (LAHC), now Homes NSW. Downer positions itself as a <b>leading social housing maintenance provider</b> — this is core business, not a side contract.</p></div>
+    <div class="gap-card major"><h3>⚔️ Ventia — the other half of the tender</h3><p>Ventia won the parallel Homes NSW contract in the same round (combined awards reported over $1.4B). Quality and KPI performance measured against the contract — and against the other provider — is a live commercial reality.</p></div>
+    <div class="gap-card strength"><h3>🏛️ Homes NSW &amp; DCJ</h3><p>Homes NSW (launched 2024) consolidated the LAHC housing portfolio — the state's social housing. It sits under the <b>Department of Communities and Justice (DCJ)</b>, and coordinates maintenance through a central <b>Maintenance Hub</b>, with delivery via large contracts like Downer's. The PD still says "Hub/LAHC" — old name, same team.</p></div>
+    <div class="gap-card strength"><h3>🏢 Your business unit</h3><p><b>Social Infrastructure &amp; Citizen Services</b> — the BU named in the PD — with the role in the <b>Assurance and Risk Hub</b>. The auditor/QA function is the contract's compliance backbone between Downer, subcontractors and Homes NSW.</p></div>
+    <div class="gap-card strength"><h3>📘 The Downer Standard (TDS)</h3><p>Downer's integrated management system, holding a <b>single certification to ISO 9001, ISO 14001, ISO 27001 and ISO 45001</b> — and it contains the <b>10 Quality Principles</b> (the PD's DG-QA-PN001 is a TDS document). When the PD says "promote the QMS (certified to ISO 9001) and internal business systems such as the TDS" — this is what they mean. Drop "I've worked inside ISO-certified IMS environments; I'd learn the TDS structure quickly" and watch heads nod.</p></div>
+    <div class="gap-card strength"><h3>🦺 Zero Harm</h3><p>Downer's safety brand, integrated into the TDS under ISO 45001, with <b>Cardinal Rules</b> for critical risks. "Zero Harm" is not a slogan — it's the name of their safety function (Zero Harm Business Partners sit on this very contract) and the PD's whole Safety KRA.</p></div>
+    <div class="gap-card moderate"><h3>🎁 Employer brand</h3><p>Perks@Downer (healthcare discounts, retail savings), Employee Assistance Program, <b>WORK180 Endorsed Employer</b>, high-performance culture, and <b>30% of vacancies filled internally</b> — useful both as a "why Downer" fact and as a retention signal if they probe your seniority.</p></div>
+  </div>
+</div>
+
+<!-- ==================== THE PANEL ==================== -->
+<div id="interviewers" class="panel">
+  <p class="panel-intro">No public interviewer names yet — these four are the roles the two documents point to. Click a card to expand. <b>When the interview invite arrives, swap the names into these cards</b> and the strategies still hold.</p>
+  <div class="interviewer-grid">
+    <div class="interviewer-card" id="cardQA">
+      <h3>Quality Assurance Manager</h3>
+      <div class="role">Named reporting line in the SEEK ad — likely hiring manager / first interview</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val">SEEK ad</div><div class="stat-label">"Reporting to the QA Manager"</div></div>
+        <div class="stat"><div class="stat-val">Desk side</div><div class="stat-label">registers · dashboards · audits</div></div>
+        <div class="stat"><div class="stat-val">WMS</div><div class="stat-label">+ SharePoint records</div></div>
+      </div>
+      <div class="detail">
+        <h4>Their language (mirror these)</h4>
+        <ul>
+          <li>"supporting quality assurance, compliance and audit activities across the Homes NSW contract"</li>
+          <li>"accurate registers and quality records across SharePoint, WMS and approved business systems"</li>
+          <li>"document control requirements" · "KPI, audit, compliance and performance dashboards"</li>
+          <li>"monitor audit outcomes … through to closure, escalating overdue items"</li>
+        </ul>
+        <h4>What they likely care about</h4>
+        <ul>
+          <li>Register hygiene — can you run document control across SharePoint + WMS without chaos?</li>
+          <li>Reporting cadence — weekly / monthly / quarterly reports and dashboards that write themselves</li>
+          <li>Closure discipline — non-conformances, corrective actions, remediation tracked to the end, overdue items escalated in writing</li>
+          <li>Audit coordination — internal and external schedules, evidence packs ready before the auditor asks</li>
+          <li>Excel depth (intermediate–advanced is an explicit requirement) and follow-through</li>
+        </ul>
+        <h4>Questions to ask them</h4>
+        <ul class="ask">
+          <li>What do the current quality registers and dashboards look like — and where's the biggest gap this role closes?</li>
+          <li>What's the most common reason corrective actions go overdue today, and what escalation cadence do you want?</li>
+          <li>How is the internal/external audit schedule structured across the three contract areas — and how far ahead are evidence packs prepared?</li>
+          <li>What does good look like for the weekly / monthly / quarterly reporting rhythm?</li>
+        </ul>
+      </div>
+    </div>
+    <div class="interviewer-card" id="cardSDP">
+      <h3>Assurance &amp; Service Delivery Partner (SDP) Manager</h3>
+      <div class="role">Reporting line in the internal PD (DG-HR-FM005) — likely the contract-side interviewer</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val">PD v1.4</div><div class="stat-label">Auditor position description</div></div>
+        <div class="stat"><div class="stat-val">Field side</div><div class="stat-label">inspections · BIFs · incidents</div></div>
+        <div class="stat"><div class="stat-val">KPI</div><div class="stat-label">contract targets per zone</div></div>
+      </div>
+      <div class="detail">
+        <h4>Their language (mirror these)</h4>
+        <ul>
+          <li>"inspection &amp; auditing regime in their designated zone"</li>
+          <li>"meeting Contract KPI requirements as a minimum"</li>
+          <li>"raise Business Improvement Forms (BIFs) for all non-conformances"</li>
+          <li>"monthly Inspection &amp; Auditing Report … commentary and trend analysis … formally present"</li>
+          <li>"monitoring of internal and external compliance to Contractual, Company and Statutory requirements"</li>
+        </ul>
+        <h4>What they likely care about</h4>
+        <ul>
+          <li>Inspection volume — pre-inspections, post-inspections, WIP inspections hitting the zone's KPI targets</li>
+          <li>BIF follow-up to completion — outstanding corrective actions are the contract's biggest pain</li>
+          <li>Subcontractor claim verification — paying only for conforming work</li>
+          <li>Incident investigation speed and report distribution (Contract Manager, Regional Managers, Homes NSW, Helpdesk)</li>
+          <li>WMS hygiene — everything saved against the right Work Order</li>
+        </ul>
+        <h4>Questions to ask them</h4>
+        <ul class="ask">
+          <li>How is the zone's inspection regime performing against contract KPI targets right now?</li>
+          <li>What non-conformance trends has the monthly report shown over the last 12 months?</li>
+          <li>How does BIF follow-up work today between auditors, DSS and subcontractors — where does it stall?</li>
+          <li>What does an excellent monthly Inspection &amp; Auditing Report look like to you?</li>
+        </ul>
+      </div>
+    </div>
+    <div class="interviewer-card" id="cardZH">
+      <h3>Zero Harm / WHS representative</h3>
+      <div class="role">Zero Harm sits in the PD's key working relationships — Downer runs Zero Harm Business Partners on this contract</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val">ISO 45001</div><div class="stat-label">inside The Downer Standard</div></div>
+        <div class="stat"><div class="stat-val">Cardinal Rules</div><div class="stat-label">critical-risk controls</div></div>
+        <div class="stat"><div class="stat-val">Incidents</div><div class="stat-label">OHS · COC · Environmental</div></div>
+      </div>
+      <div class="detail">
+        <h4>Their language (mirror these)</h4>
+        <ul>
+          <li>"Zero Harm responsibilities and accountabilities communicated to contractors"</li>
+          <li>"safety, quality and environment as a consistent agenda item at all workgroup meetings"</li>
+          <li>"investigate and report on all Zero Harm/OHS, Code of Conduct and Environmental related incidents"</li>
+          <li>"supervision according to their capabilities" · "corrective and preventive actions … to completion"</li>
+        </ul>
+        <h4>What they likely care about</h4>
+        <ul>
+          <li>Investigation quality — root cause, not blame; corrective AND preventive actions with owners</li>
+          <li>Incident reporting speed — reports completed by the requested dates, distributed to the right stakeholders</li>
+          <li>Contractor safety — SWMS reviews at sign-up, inductions, Zero Harm expectations communicated</li>
+          <li>Trends feeding prevention — incident non-conformance trends shaping the monthly audit focus</li>
+          <li>Tenant welfare — advising tenants of investigation outcomes where they're involved</li>
+        </ul>
+        <h4>Questions to ask them</h4>
+        <ul class="ask">
+          <li>What are the most common incident types on the contract today — and how fast are investigations closing?</li>
+          <li>How are preventive actions tracked to completion after an investigation?</li>
+          <li>How does the audit focus get set each month — who feeds the trends in?</li>
+        </ul>
+      </div>
+    </div>
+    <div class="interviewer-card" id="cardHR">
+      <h3>HR / Talent Acquisition</h3>
+      <div class="role">Downer is WORK180-endorsed with 30% internal hires — HR screens for values, work ethic and fit</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val">26,000+</div><div class="stat-label">people, AU · NZ · Pacific</div></div>
+        <div class="stat"><div class="stat-val">30%</div><div class="stat-label">vacancies filled internally</div></div>
+        <div class="stat"><div class="stat-val">WORK180</div><div class="stat-label">endorsed employer</div></div>
+      </div>
+      <div class="detail">
+        <h4>Their language (mirror these)</h4>
+        <ul>
+          <li>"strong work ethic, a positive attitude, and a commitment to delivering high-quality outcomes"</li>
+          <li>"high-performance culture and commitment to diversity" · "inclusion and belonging"</li>
+          <li>"we especially encourage applications from those whose voices have traditionally been underrepresented"</li>
+          <li>"even if your experience doesn't align perfectly … potential counts"</li>
+        </ul>
+        <h4>What they likely care about</h4>
+        <ul>
+          <li>Why Downer, why this contract — and whether you'll stay (30% internal mobility is your retention answer)</li>
+          <li>Values fit: Zero Harm, diversity, enabling communities to thrive</li>
+          <li>Motivation — the ad literally asks for work ethic and attitude "more than anything"</li>
+          <li>Flexibility needs and any recruitment-process adjustments you require</li>
+        </ul>
+        <h4>Questions to ask them</h4>
+        <ul class="ask">
+          <li>How would you describe the culture on the Homes NSW contract team?</li>
+          <li>What does success look like in the first 90 days from your perspective?</li>
+          <li>What learning and development support is available — and how do internal moves typically work?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ROLE RECON ==================== -->
+<div id="predecessor" class="panel">
+  <p class="panel-intro">You have <b>two role documents, not one</b>: the SEEK ad ("Quality Assurance Coordinator", reports to QA Manager) and an internal Downer PD ("Quality Auditor", reports to the SDP Manager, Assurance &amp; Risk Hub/LAHC). Treat them as two halves of the same job — and be ready to answer to both.</p>
+
+  <div class="gap-grid">
+    <div class="gap-card major">
+      <h3>📄 Two documents, one team</h3>
+      <p><b>SEEK ad — Quality Assurance Coordinator</b> (job 95378058, Government &amp; Integrated Facilities Management team): the desk side — registers, document control, dashboards, audit schedules, evidence packs, escalation of overdue items. Reports to the <b>QA Manager</b>.<br><br>
+      <b>PD — Quality Auditor (DG-HR-FM005)</b>: the field side — site pre/post inspections to contract KPI, BIFs, subcontractor claim verification, incident investigations, SWMS reviews, WMS record-keeping, the monthly Inspection &amp; Auditing Report. Reports to the <b>Assurance &amp; SDP Manager</b>, Social Infrastructure &amp; Citizen Services.<br><br>
+      <b>Strategy:</b> the PD is almost certainly the internal description behind the ad (or its sibling on the same hub). Answer to the <b>union</b>: desk discipline + field credibility. If asked which role you applied for — the SEEK QA Coordinator; then show the PD's field duties are exactly the work you've done.</p>
+    </div>
+    <div class="gap-card strength">
+      <h3>📋 What the PD reveals the job really involves</h3>
+      <p>• Pre-inspections meeting Contract KPI minimums, post-inspections on every one, plus WIP inspections — per zone<br>
+      • <b>BIFs raised for every non-conformance</b>, followed up to completion — the contract's live corrective-action engine<br>
+      • <b>Subcontractor claim verification</b> — only conforming work gets paid<br>
+      • Incident investigations (Zero Harm/OHS, Code of Conduct, Environmental) — with corrective <i>and</i> preventive actions, saved in WMS against the Work Order<br>
+      • Sign-off of Homes NSW's CIR, CIN &amp; NCN notices<br>
+      • A <b>monthly Inspection &amp; Auditing Report with trend analysis, formally presented</b><br>
+      • SWMS reviews at sign-up, inductions for new staff and subcontractors, technical OHS &amp; quality advice to DSS and Regional Managers</p>
+    </div>
+  </div>
+
+  <h3 style="color:var(--heading);font-size:0.95rem;margin:20px 0 10px;">❓ Likely questions, reverse-engineered from the two documents</h3>
+  <div class="cheat-grid">
+    <div class="cheat-box">
+      <div class="pro-asked"><b>1. "Walk me through your monthly inspection and audit report — what's in it?"</b><div class="why">Why: the PD names the report, the trend analysis and the formal presentation — they'll test whether you read it.</div></div>
+      <div class="pro-asked"><b>2. "A subcontractor disputes a claim finding. How do you handle it?"</b><div class="why">Why: claim verification plus "represent the Downer Homes team to resolve contractual issues" — the role has a commercial edge.</div></div>
+      <div class="pro-asked"><b>3. "The inspection KPI, an incident investigation and an overdue BIF all land the same week. How do you prioritise?"</b><div class="why">Why: the role's real pressure test — safety first, KPI minimums, then the BIF; say it in that order.</div></div>
+    </div>
+    <div class="cheat-box">
+      <div class="pro-asked"><b>4. "What would you change about how BIFs are followed up?"</b><div class="why">Why: outstanding corrective actions are a named duty — show a system, not complaints.</div></div>
+      <div class="pro-asked"><b>5. "You've never worked in housing. What makes you confident you can audit our subcontractors?"</b><div class="why">Why: "Experience in the Housing market" is a stated PD requirement and your biggest honest gap — have the transfer map ready (see Red Flags).</div></div>
+      <div class="pro-asked"><b>6. "How would you represent Downer in a contractual conversation with Homes NSW?"</b><div class="why">Why: the PD's purpose statement says the auditor resolves contractual issues with Homes NSW — evidence over emotion, contract language.</div></div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--heading);font-size:0.95rem;margin:20px 0 10px;">⚔️ Your edge — requirement vs your profile</h3>
+  <table class="cmp">
+    <thead><tr><th>They ask for</th><th>What you bring</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><b>High School Diploma</b></td><td>B.S. Engineering + Lean Six Sigma Black Belt (ASQ) + CAPM (PMI)</td><td class="win">Exceeds — frame as depth, not threat</td></tr>
+      <tr><td><b>2 years in a similar auditing role</b></td><td>15+ years auditing to ISO 9001/14001/45001 across government, construction, rail, defence, manufacturing</td><td class="win">Exceeds</td></tr>
+      <tr><td><b>Experience in auditing &amp; compliance</b></td><td>Third-party ISO audits, NIL non-conformance records, audit-readiness programs, CAPA frameworks</td><td class="win">Core strength</td></tr>
+      <tr><td><b>Experience in the Housing market</b></td><td>Adjacent, not direct: 14-department government QMS, Dept of Justice NSW, NSW Health, multi-phase construction QMS, ITPs across 50+ construction vendors, tenant/customer-facing NPS &amp; sentiment work, utilities &amp; facilities (ISO 55001)</td><td class="gap-warn">Your honest gap — see Red Flags for the transfer map</td></tr>
+      <tr><td><b>Trade / construction / facilities background (preferred)</b></td><td>Construction QMS (8-month ISO 9001 build, rework −30%), supplier governance for major construction clients, defence manufacturing (ISO 3834.2), heavy engineering, facilities &amp; asset management</td><td class="win">Strong adjacent base</td></tr>
+      <tr><td><b>Intermediate–advanced Excel + SharePoint</b></td><td>Excel/Power BI pivot dashboards, SharePoint QMS builds (200+ procedures migrated), Power Automate workflows</td><td class="win">Exceeds</td></tr>
+      <tr><td><b>Reporting &amp; register maintenance</b></td><td>Reporting lead time −70%, real-time dashboards, KPI/NCR/CAPA automation, document control at scale</td><td class="win">Exceeds</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cheat-grid">
+    <div class="cheat-box">
+      <h3><span class="icon">✅</span> Do</h3>
+      <ul>
+        <li class="do-say">Speak their language: BIF, WMS, TDS, DSS, SWMS, CIR/CIN/NCN, Zero Harm, Homes NSW, DCJ, LAHC — the PD's vocabulary, used correctly, proves you read it.</li>
+        <li class="do-say">Answer to the union of both documents — desk duties from the ad, field duties from the PD.</li>
+        <li class="do-say">Frame your seniority around the contract's stakes: tenants, KPI targets, Homes NSW relationship — "I want the craft, on work that matters."</li>
+        <li class="do-say">Name the internal-mobility fact (30% of vacancies filled internally) if motivation is probed.</li>
+      </ul>
+    </div>
+    <div class="cheat-box">
+      <h3><span class="icon">⛔</span> Don't</h3>
+      <ul>
+        <li class="dont-say">Don't claim direct housing-market experience you don't have — the transfer map is stronger than a stretched claim.</li>
+        <li class="dont-say">Don't call the current registers/dashboards "broken" — you haven't seen them; frame as building on what exists.</li>
+        <li class="dont-say">Don't say "just a coordinator role" or anything that reads as slumming — treat it as the deliberate move it is.</li>
+        <li class="dont-say">Don't confuse the two titles in the room — QA Coordinator (SEEK) / Quality Auditor (PD); be precise about which you applied to.</li>
+      </ul>
+    </div>
+    <div class="cheat-box">
+      <h3><span class="icon">🔗</span> Bonus moves</h3>
+      <ul>
+        <li><strong>Ask for the zone:</strong> "Which zone/contract areas would this role cover — 9, 12 or 13?" shows you know the contract structure.</li>
+        <li><strong>Mention Team Maven and DSS</strong> from the PD's working relationships — it signals you've absorbed the org structure.</li>
+        <li><strong>Bring a one-page sample</strong> of a monthly inspection/audit report with trend analysis — the PD's headline deliverable.</li>
+        <li><strong>Downer publishes sustainability + TDS material</strong> — quoting the 10 Quality Principles by name lands hard.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PRACTICE MODE ==================== -->
+<div id="practice" class="panel">
+  <div class="practice-area">
+    <p class="panel-intro">Simulate the room: 2-minute timer, speak OUT LOUD, then reveal the model answer and compare.</p>
+    <div class="practice-timer" id="practiceTimer">2:00</div>
+    <div class="card-controls">
+      <button id="timerToggle">▶ Start</button>
+      <button id="timerReset">↺ Reset</button>
+      <button class="primary" id="practiceNew">🎲 New question</button>
+      <button id="practiceReveal">👁 Reveal answer</button>
+    </div>
+    <div class="practice-question" id="practiceQuestion">
+      <div class="q-meta" id="practiceMeta">—</div>
+      <div id="practiceQText">Click "New question" to begin.</div>
+    </div>
+    <div class="practice-answer" id="practiceAnswer"></div>
+  </div>
+</div>
+
+<!-- ==================== RED FLAGS ==================== -->
+<div id="redflags" class="panel">
+  <p class="panel-intro">Things an interviewer may probe. Be ready, stay honest, never get defensive.</p>
+  <div class="gap-grid">
+    <div class="gap-card critical"><h3>Date overlaps on your resume <span class="risk-tag risk-critical">Critical</span></h3><p>Aurion (Jul 2020 – May 2024) overlaps Stramit (Aug 2022 – Mar 2023) by 8 months; Serco shows two stints; Sydney Trains ends Jul 2020 the same month Aurion starts.</p><div class="fix">Prepare one calm line about concurrent contract/consulting scope. Fix the dates on the resume before any v2 send.</div></div>
+    <div class="gap-card critical"><h3>"$225M cumulative savings" <span class="risk-tag risk-critical">Critical</span></h3><p>A very big number. If you can't substantiate it, it damages everything else you claim.</p><div class="fix">Rehearse the breakdown in one breath: Medtronic $115M revenue lift + $2M changeover + OEE/defect wins, then the sector-by-sector smaller numbers.</div></div>
+    <div class="gap-card major"><h3>No direct housing experience — a stated PD requirement <span class="risk-tag risk-major">Major</span></h3><p>The PD asks for "Experience in the Housing market". You have the adjacent spine: construction QMS, government facilities, corrective services, NSW Health, utilities, and customer/tenant-facing NPS and sentiment work.</p><div class="fix">Rehearse the transfer map: "I haven't audited social housing specifically — I have audited construction workmanship, contractor compliance and site safety across government and defence portfolios. The standard, the SWMS, the KPI discipline — all identical."</div></div>
+    <div class="gap-card major"><h3>Education items <span class="risk-tag risk-major">Major</span></h3><p>Wharton "2015 – ongoing" (11 years), "University of Raj" (confirm the exact institution name), ASQ CMQ/OE "Expected 2027".</p><div class="fix">Have honest, confident progress stories for each — courses in progress, not credentials pending forever.</div></div>
+    <div class="gap-card moderate"><h3>Overqualification — the ad asks for a diploma <span class="risk-tag risk-moderate">Moderate</span></h3><p>Black Belt + 20 years vs "High School Diploma" + 2 years auditing. They may fear churn or salary mismatch.</p><div class="fix">Use the deliberate-move answer (Flashcard 17): field + systems craft, social-housing purpose, 30% internal mobility as the growth path.</div></div>
+    <div class="gap-card moderate"><h3>Title mismatch between the two documents <span class="risk-tag risk-moderate">Moderate</span></h3><p>You applied to the SEEK "Quality Assurance Coordinator"; the PD says "Quality Auditor". If the panel uses the PD title, don't look confused.</p><div class="fix">One line: "I applied via the SEEK ad — and I've reviewed the internal PD, so I know the inspection, BIF and incident duties sit alongside the coordination work."</div></div>
+    <div class="gap-card moderate"><h3>Heavy AI claims <span class="risk-tag risk-moderate">Moderate</span></h3><p>ChatGPT/AI appears many times in the resume. If probed sceptically, a boundaries answer wins.</p><div class="fix">"AI for administration — scheduling, checklists, registers, reminders. Root cause, risk decisions and sign-off stay with people."</div></div>
+  </div>
+</div>
+
+<!-- ==================== QUESTIONS TO ASK ==================== -->
+<div id="askthem" class="panel">
+  <p class="panel-intro">Asking sharp questions signals seniority. Pick 3 for the QA Manager, 2–3 for the SDP Manager, 1–2 for Zero Harm.</p>
+  <div class="cheat-grid">
+    <div class="cheat-box">
+      <h3><span class="icon">📋</span> For the QA Manager (pick 3)</h3>
+      <ul>
+        <li><strong>1.</strong> What do the current quality registers and dashboards look like — and where's the biggest gap this role closes?</li>
+        <li><strong>2.</strong> What's the most common reason corrective actions go overdue today, and what escalation cadence do you want?</li>
+        <li><strong>3.</strong> How is the internal/external audit schedule structured across the three contract areas — how far ahead are evidence packs prepared?</li>
+        <li><strong>4.</strong> What does good look like for the weekly / monthly / quarterly reporting rhythm?</li>
+        <li><strong>5.</strong> What are the top priorities for the first six months?</li>
+      </ul>
+    </div>
+    <div class="cheat-box">
+      <h3><span class="icon">🛠️</span> For the SDP Manager (pick 2–3)</h3>
+      <ul>
+        <li><strong>1.</strong> How is the zone's inspection regime performing against contract KPI targets right now?</li>
+        <li><strong>2.</strong> What non-conformance trends has the monthly report shown over the last 12 months?</li>
+        <li><strong>3.</strong> How does BIF follow-up work today between auditors, DSS and subcontractors — where does it stall?</li>
+        <li><strong>4.</strong> What does an excellent monthly Inspection &amp; Auditing Report look like to you?</li>
+      </ul>
+    </div>
+    <div class="cheat-box">
+      <h3><span class="icon">🦺</span> For Zero Harm (pick 1–2)</h3>
+      <ul>
+        <li><strong>1.</strong> What are the most common incident types on the contract today — and how fast are investigations closing?</li>
+        <li><strong>2.</strong> How are preventive actions tracked to completion after an investigation?</li>
+        <li><strong>3.</strong> How does the monthly audit focus get set — who feeds the incident trends in?</li>
+      </ul>
+    </div>
+    <div class="cheat-box">
+      <h3><span class="icon">⚡</span> Don't ask / Do ask</h3>
+      <ul>
+        <li class="dont-say">Don't ask about salary, perks or remote days in round one — the recruiter handles those.</li>
+        <li class="dont-say">Don't ask questions answerable from the ad (e.g. "what does Downer do").</li>
+        <li class="do-say">Do ask which zone / contract areas the role covers — 9, 12 or 13.</li>
+        <li class="do-say">Do ask how the team works day to day with Homes NSW and the Maintenance Hub.</li>
+        <li class="do-say">Do ask what the team's relationship with the DSS and subcontractor base looks like.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){ return document.querySelector(s); };
+
+  /* ---------- nav ---------- */
+  var navBtns = document.querySelectorAll("#mainNav button");
+  var panels = document.querySelectorAll(".panel");
+  navBtns.forEach(function(b){
+    b.addEventListener("click", function(){
+      navBtns.forEach(function(x){ x.classList.remove("active"); });
+      b.classList.add("active");
+      panels.forEach(function(p){ p.classList.remove("active"); });
+      document.getElementById(b.getAttribute("data-panel")).classList.add("active");
+    });
+  });
+
+  /* ---------- theme ---------- */
+  var themeBtn = $("#themeToggle");
+  function applyTheme(){
+    var light = document.documentElement.getAttribute("data-theme") === "light";
+    themeBtn.textContent = light ? "☀️" : "🌙";
+  }
+  themeBtn.addEventListener("click", function(){
+    var light = document.documentElement.getAttribute("data-theme") === "light";
+    if(light){ document.documentElement.removeAttribute("data-theme"); try{localStorage.removeItem("war-room-theme");}catch(e){} }
+    else { document.documentElement.setAttribute("data-theme","light"); try{localStorage.setItem("war-room-theme","light");}catch(e){} }
+    applyTheme();
+  });
+  try{ if(localStorage.getItem("war-room-theme")==="light"){ document.documentElement.setAttribute("data-theme","light"); } }catch(e){}
+  applyTheme();
+
+  /* ---------- flashcards ---------- */
+  var CARDS = [
+    { who:"QA Manager", type:"Coordination",
+      q:"Walk me through how you would maintain the quality registers and records across SharePoint, WMS and our approved business systems.",
+      a:"Document control first: naming conventions, version control, retention rules, and one source of truth per record type. Registers live where the work happens — WMS against the Work Order for inspection and incident records, SharePoint for the QMS documents — and they must stay in sync, not duplicated. I've done this at scale: I migrated 200+ legacy procedures into a SharePoint-based QMS, improving searchability by 40%, and consolidated 150+ procedure manuals across two regional centres into one business management system — findability up 50%, onboarding training time down 20%. The discipline that makes it stick is automation: Power Automate approval flows cut approval cycles by 60%, so records move without chasing. A register is only as good as its currency — that's why I automate the reminders and the escalation.",
+      why:"Directly maps to the ad's first duty — \"maintain accurate registers and quality records across SharePoint, WMS and approved business systems, applying document control requirements\" — with three real numbers from your resume." },
+    { who:"QA Manager", type:"Coordination",
+      q:"What KPI, audit, compliance and performance dashboards would you build for this contract?",
+      a:"A handful the contract actually runs on: audit outcomes by zone, non-conformance count and age, corrective actions to closure, inspection performance against contract KPI targets, and incident trends. Built in Power BI with automated feeds, refreshed for weekly, monthly and quarterly views. The evidence: my automated quality-metrics dashboards cut reporting lead time by 70%; a risk and non-conformance dashboard in Tableau and Minitab cut risk occurrences 25% over 12 months; and a real-time incident dashboard took investigation time from 72 hours to under 24. The point of a dashboard isn't reporting — it's making the next decision obvious, like which corrective action is about to go overdue and needs escalation in writing.",
+      why:"The ad names \"KPI, audit, compliance and performance dashboards\" and the weekly/monthly/quarterly reporting rhythm — answer with the rhythm plus three measurable outcomes." },
+    { who:"QA Manager", type:"Coordination",
+      q:"A non-conformance is raised against a subcontractor's work. Walk me through from raising to closure.",
+      a:"Raise the BIF with specifics — what, where, which requirement it breaches, evidence attached. Then root cause: 5 Whys and Fishbone with the subcontractor, not at them. Corrective action gets one owner and one due date, and it's tracked to closure — I built an NCR reduction framework using PowerApps for real-time reporting and Tableau for analytics that cut NCR handling time by 40% and improved supplier performance by 15% in six months. If it's going overdue, I escalate in writing before the due date — that's the contract discipline the PD describes. And the trend doesn't stop at one closure: it feeds the monthly inspection report, so one BIF becomes a prevention instead of a recurrence.",
+      why:"Uses their term (BIF), mirrors the PD's follow-up → escalation → trend-analysis chain, and backs it with a real framework and numbers." },
+    { who:"QA Manager", type:"Coordination",
+      q:"How do you coordinate internal and external audit schedules, documentation and evidence packs?",
+      a:"A single audit calendar with owners, scope, criteria and an evidence checklist per audit — and evidence packs compiled as the year progresses, not the week before. I designed a multi-standard audit readiness program for ISO 9001, ISO 13485 and ISO 55001 — gap analyses, automated corrective-action tracking in Power BI, real-time readiness dashboards — that achieved NIL non-conformance across all three certifications. I also built an AI-assisted audit tool that improved audit readiness by 35% and cut preparation effort by 50%. The principle I run on: audit-ready every day, not audit-ready by deadline — because on a contract like Homes NSW, external audits land on top of everything else.",
+      why:"Matches \"coordinate quality assurance and compliance activities, including internal and external audit schedules, documentation and evidence packs\" — with the NIL non-conformance record as the proof point." },
+    { who:"QA Manager", type:"Coordination",
+      q:"Tell me about your Excel and reporting capability — we run on spreadsheets and SharePoint here.",
+      a:"Intermediate-to-advanced Excel is my everyday tool: pivot tables, lookups, conditional formatting, dashboards. I built a real-time inventory dashboard with Power BI and Excel pivots integrating SAP, Oracle and ERP data that cut inventory overhead costs 20% and improved stock accuracy 15%. I pair Excel with Power Query and Power Automate so reporting refreshes itself instead of being re-keyed — my automated quality-metrics reporting cut lead time 70%. And when management needs a concise read, I write the one-page summary: the number, the trend, the recommended action. Formal report writing has been core to every audit role I've held — clarity for stakeholders is literally in the job description.",
+      why:"The ad explicitly requires \"intermediate to advanced Microsoft Excel skills\" — answer with a real Excel-based achievement, not a skill list." },
+    { who:"QA Manager", type:"Coordination",
+      q:"You're coordinating multiple stakeholders and deadlines. How do you keep overdue actions from happening in the first place?",
+      a:"Visibility and ownership, not chasing. Every action has one owner, one due date, one register — and automatic escalation before it goes overdue, in writing, so nothing goes quiet. In practice: I automated lifecycle notifications across 14+ government functions, eliminating manual tracking; I cut process-review approval cycles from 15 days to 5 days through workflow automation; and my audit dashboards flag overdue items so escalation happens on time, not after. Where I've seen overdue actions pile up, the fix was always the same: a decision protocol plus automated reminders. That's exactly what this role's 'escalating overdue items as required' asks for — the system does the remembering, the person does the resolving.",
+      why:"Maps to the ad's closure-and-escalation duty plus multi-stakeholder coordination, with three concrete automations from your history." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"Walk me through a site inspection from planning to close-out — and how you'd meet our contract KPI targets.",
+      a:"Planned pre-inspections first, scheduled to meet the contract KPI minimums — then post-inspections on every pre-inspection, and subcontractor claim verification. I inspect to the standard, not to opinion: workmanship, site safety, contractor compliance against the contract, the SWMS and the work order. Non-conformances become BIFs with owners and due dates, followed up to completion. Work-in-progress and post-inspections fill the month to hit the zone's KPI targets. At month-end the whole picture goes into the inspection and audit report — commentary plus trend analysis of the non-conformances — and it's formally presented. The system behind it: I standardized Inspection and Test Plans across 50+ vendors for construction clients, cutting discrepancies by 40% — inspection works when the criteria are written down before the visit.",
+      why:"Mirrors the PD's KRA bullets almost verbatim — pre/post inspection, claim verification, BIFs, monthly report — proving you've actually read the internal PD." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"How do you verify a subcontractor's claim is legitimate?",
+      a:"The claim is verified against the inspection record: work complete, conforming to the ITP and scope, defects closed, evidence attached. No verification without the site evidence. I've built this system before — a supplier audit tool using PowerApps that standardized Inspection and Test Plans across 50+ vendors, cutting discrepancies by 40%, plus a supplier performance dashboard that drove a 25% improvement in compliance. Claim verification isn't about catching people out; it's about paying for conforming work and catching quality issues before they become latent defects — which protects the tenant, the contract and the relationship with Homes NSW.",
+      why:"Subcontractor claim verification is a named PD duty; the answer shows the control loop plus the governance mindset — and why it matters commercially." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"You arrive on site and find a serious safety issue. Walk me through your next hour and your next week.",
+      a:"First hour: make it safe — stop or isolate the work, notify the supervisor on site. Document immediately with photos and the work order reference, and report it through the system: WMS against the work order, Zero Harm report raised. Then the investigation: root cause with 5 Whys and Fishbone, corrective AND preventive actions with owners and due dates. Next week: follow up to completion, escalate in writing if anything threatens the due date, and distribute the completed report to the stakeholders — Contract Manager, SDP Manager, Regional Manager, Homes NSW where directed. If a tenant is involved, they get advised of the outcome. I've run this exact loop — a real-time Power BI incident dashboard cut investigation time from 72 hours to under 24, because the faster you learn, the faster you prevent.",
+      why:"The PD spells out this incident chain — WMS, escalation before the due date, the distribution list, tenant advice. Showing you know their flow is the whole point." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"A subcontractor's SWMS doesn't meet WorkCover requirements. What do you do?",
+      a:"Review at sign-up, as the process requires — that's the gate, not an afterthought. Check it against the WorkCover expectations: high-risk work covered, controls specific to the actual job rather than a generic template, and current. If it's deficient, I send it back with the specific gaps identified and work with them to fix it — I've standardised contractor documentation at scale before, ITPs across 50+ vendors with a 40% reduction in discrepancies, and the SWMS review follows the same pattern: check the job, not the template. Authorise only when it meets the requirements, and pair it with induction — I've delivered training and inductions on contract requirements and systems to new employees and subcontractors. The aim is a compliant subcontractor base, not a blocked one.",
+      why:"SWMS review at sign-up plus training/inductions are named PD duties; the answer is firm on compliance but constructive — the tone the role needs." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"Homes NSW raises a CIR, CIN or NCN. How do you handle it?",
+      a:"Treat it as a priority workstream, not a form: investigate to root cause, complete the report by the requested completion date, capture corrective and preventive actions, save everything into WMS against the work order, and close the loop with sign-off. Then distribute to the stakeholders — Contract Manager, SDP Manager, Regional Managers, Homes NSW managers where directed. Beyond the single item, I look at the trend: the PD asks the auditor to identify incident-related non-conformance trends and feed the monthly audit focus — one NCN is a case, three are a pattern, and the pattern is what the audit focus should chase. That's the difference between closing notices and improving the contract.",
+      why:"Demonstrates the PD's sign-off duty and elevates to trend analysis — the auditor's actual value-add on this contract." },
+    { who:"SDP", type:"Field / Auditing",
+      q:"How do you provide technical OHS and quality advice to supervisors and subcontractors?",
+      a:"By being useful, not policed. I'm trained in WHS and HAZCHEM control, I work to ISO 45001, and I maintain hazard and incident registers — so the advice comes from a system, not opinion. When a DSS or subcontractor asks, I give the requirement, the reason, and the practical way to comply — I've coached 50+ staff on quality and Lean tools, and delivered compliance training programs that raised audit success rates across cross-functional teams. Advice that only quotes a clause gets ignored; advice that solves the job gets adopted. On a housing contract the stakes make it personal: the advice has to work for the tradesperson on the roof, not just the auditor in the office.",
+      why:"Maps to the PD's operational duty — technical OHS and quality advice to DSS, Regional Managers and subcontractors — with coaching credibility backed by numbers." },
+    { who:"Zero Harm", type:"WHS",
+      q:"What does Zero Harm mean to you in practice?",
+      a:"Zero Harm means the target is none — not fewer. Everyone accountable for each other's safety, not just their own, with the system there to make it possible. Practically I've done it in layers: safety registers — hazards, incidents, reviews — aligned to ISO 45001; safety as a standing agenda item at every workgroup meeting; supervision matched to capability; and Zero Harm responsibilities communicated to every contractor in my area of control. The results: I achieved a Zero Harm culture across metro and regional sites, and at a multi-site organisation I directed a WHS system upgrade with hazard assessments and safety dashboards that reduced incidents 20% in six months. The engine is the same as quality — visibility, root cause, closed loop — which is exactly how the TDS connects Zero Harm and the 10 Quality Principles.",
+      why:"Zero Harm is their brand and their KRA — the answer uses the PD's exact duties (agenda item, supervision, contractor communication) with your real results and shows you know the TDS." },
+    { who:"Zero Harm", type:"WHS",
+      q:"Tell me about an incident investigation you led — what made it good?",
+      a:"A good investigation finds the system failure, not the scapegoat. I lead with 5 Whys, Fishbone and fault-tree analysis, with the people involved in the room — the people doing the work usually know what actually happened. The report names corrective AND preventive actions with owners and due dates, and I follow up to completion, documented against the work order. Speed matters for learning: I deployed a real-time incident dashboard that cut investigation time from 72 hours to under 24. And the loop closes properly when the outcome is communicated — tenants advised where they're involved, the report distributed to the right stakeholders, and the trend feeding the next audit focus. That's the full circle the PD describes.",
+      why:"Incident investigation is a headline KRA in the PD — the answer shows rigour, speed, and the exact communication loop they specify, without inventing a housing story." },
+    { who:"Zero Harm", type:"WHS",
+      q:"How do you make sure contractors actually follow safety requirements — not just at sign-up?",
+      a:"Three levers: the sign-up gate — SWMS reviewed and authorised before work starts; induction and training — I've run inductions on contract requirements and systems for new employees and subcontractors; and field verification — every site inspection checks safety compliance alongside quality, because a signed SWMS that isn't followed is paperwork. I also keep Zero Harm visible: responsibilities communicated to contractors in my area of control, and safety as a standing meeting agenda item. The outcome isn't theoretical — I drove a zero-accident culture across metro and regional sites, and cut incidents 20% in six months with hazard assessments and monitoring dashboards. Compliance at sign-up is the gate; verification in the field is the wall.",
+      why:"Mirrors the PD's Safety KRA (SWMS, inductions, Zero Harm communication) and proves field-level credibility with two real results." },
+    { who:"HR", type:"Behavioural",
+      q:"Why Downer, and why this role?",
+      a:"Three reasons. The purpose first: Downer enables communities to thrive by running the essential services people depend on — and on the Homes NSW contract that's literally the homes of the most vulnerable tenants. Quality and safety there aren't administrative — they're dignity. Second, the role: it sits at the exact intersection of my career — ISO 9001 quality systems, auditing, WHS, subcontractor compliance — with a field component that keeps me close to real work. Third, the company: 26,000+ people, 30% of vacancies filled internally, WORK180-endorsed, Perks@Downer — I'm looking to build a long career here, not take a job. My track record is systems that stick and audits that come back NIL non-conformance — I want to put that to work where it matters most.",
+      why:"Uses the ad's own facts and Downer's purpose, and quietly answers the overqualification objection with commitment signals (30% internal mobility)." },
+    { who:"HR", type:"Behavioural",
+      q:"You've held senior titles. Why do you want a coordinator/auditor role now?",
+      a:"Because I want to be in the field where the work happens, on a contract that matters. My best work has always been hands-on — inspections, audits, root cause on the floor, coaching crews. This role is that: the desk side — registers, dashboards, audit schedules — plus the site side — inspections, BIFs, incident investigations. I've led teams and programs; this role lets me do the craft at depth in a sector I want to build the next ten years in. And I know the growth path exists here: with 30% of Downer's vacancies filled internally, strong delivery in this role is the proven route into the QA Manager level over time. For me this isn't a step down — it's a deliberate step into work that matters.",
+      why:"Pre-empts the overqualification objection honestly, uses the ad's internal-mobility fact as a retention signal, and never sounds like slumming." },
+    { who:"HR", type:"Behavioural",
+      q:"Tell me about influencing subcontractors and internal teams who don't report to you.",
+      a:"Quality is the classic no-authority function — and on this contract the role sits between Downer, subcontractors, Homes NSW and tenants, none of whom report to me. My style is data plus coaching. When I consolidated 150+ procedure manuals across two regional centres into one business management system, teams resisted losing 'their' manuals — so I ran workshops where each team re-mapped its own processes with my facilitation, showed them the before-and-after numbers, and they ended up owning the new system: findability up 50%, onboarding training time down 20%. Same pattern with subcontractors: supplier performance dashboards made compliance visible and negotiation-ready — a 25% compliance improvement. Influence comes from making the right thing the easy thing.",
+      why:"The PD's purpose statement is literally about liaising with internal staff, subcontractors and Homes NSW — influence without authority IS the job. Two real numbers anchor it." },
+    { who:"HR", type:"Behavioural",
+      q:"How do you handle pushback when you raise a non-conformance?",
+      a:"I treat the BIF or NCR as a shared problem with data, not an accusation. I go to the line or the subcontractor with the actual defect numbers, run root cause WITH them — 5 Whys and Fishbone work best when the people doing the work lead them — and make the business case visible: a Kaizen event on metal-fabrication non-conformances eliminated 22% of scrap, worth $750K a year. That turns the conversation from 'quality police' to 'we're protecting our own margins'. On a housing contract I'd add the tenant: a non-conformance means a family living with the defect — that's the case for closure speed. And when the data says stop, I hold the line calmly — compliance isn't negotiable, the tone just doesn't have to be an argument.",
+      why:"Behavioural question with real numbers and the contract's human stake — memorable, and it shows backbone without aggression." },
+    { who:"HR", type:"Behavioural",
+      q:"What would your referees say is your biggest weakness — and what have you done about it?",
+      a:"They'd say I can over-invest in documentation quality — reworking an SOP that's 'good enough' because I know it's the document that gets audited two years later. The fix I've adopted: standards and templates up front, so rigour is built in without reinventing the wheel each time. The second honest one: I move fast on improvement ideas and have to pace the change for others — which is why I lean on structured change management, ADKAR, in every rollout. On a compliance-heavy contract the first one is more asset than weakness; the second is the reason my changes actually stick.",
+      why:"Self-aware, weaknesses that are genuine strengths for a document-control-heavy role — and ADKAR signals change-management maturity." }
+  ];
+
+  var filtered = CARDS.slice();
+  var ci = 0, flipped = false;
+  var card = $("#flashcard"), front = $("#cardFront"), back = $("#cardBack");
+  var counter = $("#cardCounter"), flipBtn = $("#flipBtn");
+
+  function setFilter(f){
+    filtered = f === "all" ? CARDS.slice() : CARDS.filter(function(c){ return c.who === f; });
+    ci = 0; renderCard();
+  }
+  function renderCard(){
+    if(filtered.length === 0) return;
+    var c = filtered[ci];
+    front.innerHTML = '<div class="interviewer-tag">👤 ' + c.who + " · " + c.type + "</div><div class=\"q-text\">" + c.q + "</div>";
+    back.innerHTML = "<h3>Model answer — speak it in ~90 seconds</h3><div class=\"answer-body\">" + c.a + "</div><div class=\"why\">💡 Why this works: " + c.why + "</div>";
+    flipped = false; back.style.display = "none"; front.style.display = "block";
+    counter.textContent = "Card " + (ci + 1) + " / " + filtered.length;
+  }
+  function flip(){
+    if(filtered.length === 0) return;
+    flipped = !flipped;
+    front.style.display = flipped ? "none" : "block";
+    back.style.display = flipped ? "block" : "none";
+  }
+  card.addEventListener("click", flip);
+  flipBtn.addEventListener("click", flip);
+  $("#nextBtn").addEventListener("click", function(){ if(filtered.length){ ci = (ci + 1) % filtered.length; renderCard(); } });
+  $("#prevBtn").addEventListener("click", function(){ if(filtered.length){ ci = (ci - 1 + filtered.length) % filtered.length; renderCard(); } });
+  $("#randBtn").addEventListener("click", function(){ if(filtered.length){ ci = Math.floor(Math.random() * filtered.length); renderCard(); } });
+  document.querySelectorAll("#flashcardFilters .filter-chip").forEach(function(chip){
+    chip.addEventListener("click", function(){
+      document.querySelectorAll("#flashcardFilters .filter-chip").forEach(function(x){ x.classList.remove("active"); });
+      chip.classList.add("active");
+      setFilter(chip.getAttribute("data-filter"));
+    });
+  });
+  renderCard();
+
+  /* ---------- interviewer expand ---------- */
+  ["cardQA","cardSDP","cardZH","cardHR"].forEach(function(id){
+    document.getElementById(id).addEventListener("click", function(){ this.classList.toggle("expanded"); });
+  });
+
+  /* ---------- practice mode ---------- */
+  var timerEl = $("#practiceTimer"), timerToggle = $("#timerToggle"), timerReset = $("#timerReset");
+  var seconds = 120, timerId = null;
+  function drawTimer(){
+    var m = Math.floor(seconds / 60), s = seconds % 60;
+    timerEl.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  timerToggle.addEventListener("click", function(){
+    if(timerId){ clearInterval(timerId); timerId = null; timerToggle.textContent = "▶ Resume"; }
+    else { timerId = setInterval(function(){
+      if(seconds > 0){ seconds--; drawTimer(); }
+      if(seconds === 0){ clearInterval(timerId); timerId = null; timerToggle.textContent = "▶ Start"; timerEl.style.color = "var(--red)"; }
+    }, 1000); timerToggle.textContent = "⏸ Pause"; }
+  });
+  timerReset.addEventListener("click", function(){
+    clearInterval(timerId); timerId = null; seconds = 120; timerToggle.textContent = "▶ Start";
+    timerEl.style.color = "var(--accent)"; drawTimer();
+  });
+  $("#practiceNew").addEventListener("click", function(){
+    var c = CARDS[Math.floor(Math.random() * CARDS.length)];
+    $("#practiceMeta").textContent = "👤 " + c.who + " · " + c.type + " · 2-minute answer";
+    $("#practiceQText").textContent = c.q;
+    $("#practiceAnswer").classList.remove("visible");
+    $("#practiceAnswer").textContent = "Model answer:\n\n" + c.a + "\n\n💡 Why this works: " + c.why;
+    seconds = 120; drawTimer(); timerEl.style.color = "var(--accent)";
+  });
+  $("#practiceReveal").addEventListener("click", function(){
+    var a = $("#practiceAnswer");
+    if(a.textContent) a.classList.toggle("visible");
+  });
+  drawTimer();
+})();
+</script>
+</body>
+</html>

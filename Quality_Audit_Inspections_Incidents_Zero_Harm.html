@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Bench</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#F1F3F6; --surface:#FFFFFF; --surface-2:#E7EBF1; --surface-3:#DCE2EA;
+  --ink:#16212E; --ink-2:#4A5A6C; --ink-3:#7A8A9C; --line:#C9D2DE;
+  --brand:#1F4E79; --brand-ink:#FFFFFF;
+  --eess:#B45309; --eess-soft:#F5E7D3; --eess-line:#E2C9A4;
+  --gems:#1E7A4F; --gems-soft:#DCEFE4; --gems-line:#B7D9C5;
+  --fire:#B23A3A; --fire-soft:#F4DEDE; --fire-line:#E0B6B6;
+  --ok:#0F766E; --ok-soft:#D9EFEB;
+  --warn:#8A5A00; --warn-soft:#F7ECD2;
+  --radius:6px; --radius-sm:4px;
+  --shadow:0 1px 2px rgba(22,33,46,.08), 0 4px 14px rgba(22,33,46,.06);
+  --font-d:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-m:"IBM Plex Mono","Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E141B; --surface:#16202B; --surface-2:#1D2A38; --surface-3:#24333F;
+    --ink:#E9EEF4; --ink-2:#9FB0C2; --ink-3:#6E8094; --line:#2C3A4A;
+    --brand:#6E9CC9; --brand-ink:#0E141B;
+    --eess:#E8A33D; --eess-soft:#2E2413; --eess-line:#57451F;
+    --gems:#4FBF8A; --gems-soft:#14291F; --gems-line:#2C4A3A;
+    --fire:#E07171; --fire-soft:#301A1A; --fire-line:#59302F;
+    --ok:#4FC3B5; --ok-soft:#122E2A;
+    --warn:#D9A93D; --warn-soft:#2E2513;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E141B; --surface:#16202B; --surface-2:#1D2A38; --surface-3:#24333F;
+  --ink:#E9EEF4; --ink-2:#9FB0C2; --ink-3:#6E8094; --line:#2C3A4A;
+  --brand:#6E9CC9; --brand-ink:#0E141B;
+  --eess:#E8A33D; --eess-soft:#2E2413; --eess-line:#57451F;
+  --gems:#4FBF8A; --gems-soft:#14291F; --gems-line:#2C4A3A;
+  --fire:#E07171; --fire-soft:#301A1A; --fire-line:#59302F;
+  --ok:#4FC3B5; --ok-soft:#122E2A;
+  --warn:#D9A93D; --warn-soft:#2E2513;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-d); font-size:16px; line-height:1.55;
+  padding:0 clamp(16px,4vw,40px) 64px;
+}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3{text-wrap:balance}
+a{color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px}
+.mono{font-family:var(--font-m)}
+.tn{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+/* ============ HERO ============ */
+.hero{padding-block:40px 8px;display:grid;grid-template-columns:1.7fr 1fr;gap:32px;align-items:end}
+.eyebrow{font-family:var(--font-m);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+.hero h1{font-size:clamp(30px,4.6vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.04;margin:0 0 14px}
+.hero h1 .reg{color:var(--brand)}
+.hero .lede{font-size:16.5px;color:var(--ink-2);max-width:56ch;margin:0}
+.howto{font-family:var(--font-m);font-size:12.5px;color:var(--ink-3);margin:14px 0 0}
+.howto b{color:var(--ink-2);font-weight:600}
+
+.stamp{
+  border:2.5px solid var(--ink);border-radius:var(--radius);
+  padding:18px 16px 14px;transform:rotate(-2deg);
+  background:var(--surface);box-shadow:var(--shadow);
+  font-family:var(--font-m);text-align:center;
+}
+.stamp .rule{font-weight:600;font-size:13px;letter-spacing:.08em;line-height:1.5}
+.stamp .sub{font-size:11px;color:var(--ink-3);margin-top:8px;letter-spacing:.06em}
+.stamp .tick{color:var(--ok);font-size:20px;line-height:1;display:block;margin-bottom:6px}
+
+/* ============ EVIDENCE PIPELINE ============ */
+.pipeline{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:28px 0 8px}
+.pipe-step{
+  flex:1 1 180px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);
+  display:flex;gap:10px;align-items:center;min-width:160px;
+}
+.pipe-step .n{font-family:var(--font-m);font-weight:600;color:var(--brand);font-size:13px}
+.pipe-step .t{font-weight:700;font-size:14px}
+.pipe-step .s{font-size:12px;color:var(--ink-2);line-height:1.35}
+.pipe-arrow{align-self:center;color:var(--ink-3);font-size:18px;padding:0 2px}
+
+/* ============ TABS ============ */
+.tabs{position:sticky;top:0;z-index:20;background:var(--bg);margin:24px -4px 0;padding:10px 4px 12px}
+.tabrow{display:flex;gap:6px;flex-wrap:wrap}
+.tab{
+  appearance:none;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-2);font-family:var(--font-d);font-weight:600;font-size:13.5px;
+  padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.tab:hover{border-color:var(--brand);color:var(--brand)}
+.tab[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.tab .em{margin-right:6px}
+
+.panel{padding-top:18px}
+.panel > h2{margin:0 0 4px;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.panel .subhead{color:var(--ink-2);margin:0 0 20px;max-width:70ch;font-size:15px}
+
+/* ============ PATTERN CARDS ============ */
+.pattern{
+  background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--brand);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px 18px;margin:18px 0;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;
+}
+.pattern .p-icon{font-size:22px;line-height:1.2}
+.pattern .p-body{flex:1 1 300px}
+.pattern .p-body b{font-weight:700}
+.pattern .p-body{font-size:14.5px;color:var(--ink-2)}
+.pattern.eess{border-left-color:var(--eess)}
+.pattern.gems{border-left-color:var(--gems)}
+.pattern.fire{border-left-color:var(--fire)}
+.pattern.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+
+.grid{display:grid;gap:14px;margin:18px 0}
+.grid.g3{grid-template-columns:repeat(3,1fr)}
+.grid.g2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:820px){.grid.g3,.grid.g2{grid-template-columns:1fr}}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 18px;
+}
+.card h3{margin:0 0 6px;font-size:15.5px;font-weight:700}
+.card p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.card .code{font-family:var(--font-m);font-size:12px;color:var(--brand);margin-top:8px;display:block}
+
+/* ============ STAGE STEPPER ============ */
+.stepper{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 6px}
+.stage{
+  appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-2);font-family:var(--font-d);font-weight:600;font-size:13px;
+  padding:8px 12px;border-radius:var(--radius);text-align:left;
+}
+.stage .st-n{display:block;font-family:var(--font-m);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em;margin-bottom:1px}
+.stage:hover{border-color:var(--brand);color:var(--brand)}
+.stage[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.stage[aria-selected="true"] .st-n{color:var(--brand-ink);opacity:.75}
+.stage.eess-sel[aria-selected="true"]{background:var(--eess);border-color:var(--eess)}
+.stage.gems-sel[aria-selected="true"]{background:var(--gems);border-color:var(--gems)}
+.stage.fire-sel[aria-selected="true"]{background:var(--fire);border-color:var(--fire)}
+
+.stagedetail{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:20px 22px;margin-top:10px;min-height:180px;
+}
+.stagedetail h4{margin:0 0 8px;font-size:17px;font-weight:700}
+.stagedetail p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2);max-width:80ch}
+.stagedetail ul{margin:0 0 6px;padding-left:20px}
+.stagedetail li{font-size:14px;color:var(--ink-2);margin-bottom:5px}
+.stagedetail .verdict{
+  font-family:var(--font-m);font-size:12.5px;background:var(--surface-2);
+  border:1px dashed var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-top:10px;
+}
+.stagedetail .verdict b{color:var(--ink)}
+
+/* ============ RISK LEVELS ============ */
+.lv{border-top:4px solid var(--surface-3)}
+.lv.l1{border-top-color:var(--gems)}
+.lv.l2{border-top-color:var(--warn)}
+.lv.l3{border-top-color:var(--fire)}
+.lv .lv-n{font-family:var(--font-m);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.lv.l1 .lv-n{color:var(--gems)} .lv.l2 .lv-n{color:var(--warn)} .lv.l3 .lv-n{color:var(--fire)}
+.lv ul{margin:8px 0 0;padding-left:18px}
+.lv li{font-size:13px;color:var(--ink-2);margin-bottom:4px}
+
+/* ============ ROUTER ============ */
+.router{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:8px}
+@media (max-width:820px){.router{grid-template-columns:1fr}}
+.products{display:flex;flex-direction:column;gap:8px}
+.prod{
+  appearance:none;cursor:pointer;text-align:left;border:1px solid var(--line);
+  background:var(--surface);border-radius:var(--radius);padding:11px 13px;
+  font-family:var(--font-d);
+}
+.prod .p-name{font-weight:700;font-size:13.5px;color:var(--ink)}
+.prod .p-fam{font-size:11.5px;color:var(--ink-3);font-family:var(--font-m);margin-top:2px}
+.prod:hover{border-color:var(--brand)}
+.prod[aria-selected="true"]{border-color:var(--brand);background:var(--surface-2);box-shadow:inset 3px 0 0 var(--brand)}
+.routebox{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:20px 22px;
+}
+.routebox h4{margin:0 0 2px;font-size:18px;font-weight:800}
+.routebox .r-fam{font-family:var(--font-m);font-size:12px;color:var(--ink-3);margin-bottom:14px}
+.routebox h5{margin:16px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-family:var(--font-m)}
+.verdicts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.vpill{
+  font-family:var(--font-m);font-size:12px;font-weight:600;padding:5px 10px;
+  border-radius:999px;border:1px solid currentColor;
+}
+.vpill.yes{color:var(--fire)} .vpill.no{color:var(--ok)} .vpill.check{color:var(--warn)}
+.routebox p{font-size:14px;color:var(--ink-2);margin:0 0 8px;max-width:72ch}
+.routebox .steps{counter-reset:r;margin:6px 0 0;padding:0;list-style:none}
+.routebox .steps li{
+  counter-increment:r;font-size:13.5px;color:var(--ink-2);margin-bottom:6px;padding-left:26px;position:relative;
+}
+.routebox .steps li::before{
+  content:counter(r);position:absolute;left:0;top:1px;width:18px;height:18px;
+  border:1px solid var(--brand);color:var(--brand);border-radius:50%;
+  font-family:var(--font-m);font-size:10.5px;display:flex;align-items:center;justify-content:center;
+}
+
+/* ============ ACRONYMS ============ */
+.acrogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin:16px 0}
+.acro{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:11px 14px}
+.acro .term{font-family:var(--font-m);font-weight:600;font-size:13px;color:var(--brand)}
+.acro .def{font-size:13px;color:var(--ink-2);margin-top:2px;line-height:1.45}
+.acrogroup{margin:22px 0 4px;font-family:var(--font-m);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ============ QUIZ ============ */
+.quiz{max-width:760px;margin-top:6px}
+.q-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:22px 24px;margin-bottom:14px;
+}
+.q-card .q-n{font-family:var(--font-m);font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+.q-card h3{margin:6px 0 14px;font-size:17.5px;font-weight:700;line-height:1.35}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{
+  appearance:none;cursor:pointer;text-align:left;border:1px solid var(--line);
+  background:var(--bg);border-radius:var(--radius);padding:11px 14px;
+  font-family:var(--font-d);font-size:14px;color:var(--ink);
+}
+.opt:hover{border-color:var(--brand)}
+.opt[aria-disabled="true"]{cursor:default}
+.opt.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ink)}
+.opt.wrong{background:var(--fire-soft);border-color:var(--fire);color:var(--ink)}
+.feedback{margin-top:12px;font-size:14px;color:var(--ink-2);border-left:3px solid var(--brand);padding-left:12px}
+.feedback b{color:var(--ink)}
+.scorebar{font-family:var(--font-m);font-size:13px;color:var(--ink-2);margin-bottom:12px}
+.restart{
+  appearance:none;cursor:pointer;border:1px solid var(--brand);background:transparent;color:var(--brand);
+  font-family:var(--font-d);font-weight:600;font-size:13px;padding:8px 16px;border-radius:999px;
+}
+
+/* ============ TABLE ============ */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th{
+  font-family:var(--font-m);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;
+  text-align:left;padding:10px 14px;border-bottom:2px solid var(--line);color:var(--ink-2);background:var(--surface-2);
+}
+td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+tr:last-child td{border-bottom:none}
+td b{color:var(--ink)}
+td.mono{font-family:var(--font-m);font-size:12px}
+
+.checklist{counter-reset:c;list-style:none;padding:0;margin:14px 0}
+.checklist li{
+  counter-increment:c;position:relative;padding:10px 14px 10px 46px;margin-bottom:8px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+  font-size:14px;color:var(--ink-2);
+}
+.checklist li::before{
+  content:counter(c);position:absolute;left:12px;top:10px;width:22px;height:22px;
+  background:var(--brand);color:var(--brand-ink);border-radius:50%;
+  font-family:var(--font-m);font-size:11px;display:flex;align-items:center;justify-content:center;
+}
+.checklist li b{color:var(--ink)}
+
+/* ============ RS WALKTHROUGH ============ */
+.rs-steps details{margin-bottom:8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.rs-steps summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:14px;list-style:none;display:flex;gap:10px;align-items:baseline}
+.rs-steps summary::-webkit-details-marker{display:none}
+.rs-steps summary .rs-n{font-family:var(--font-m);color:var(--brand);font-size:12px}
+.rs-steps summary::after{content:"▸";margin-left:auto;color:var(--ink-3);transition:transform .15s}
+.rs-steps details[open] summary::after{transform:rotate(90deg)}
+.rs-steps .rs-body{padding:2px 16px 14px;font-size:13.5px;color:var(--ink-2)}
+.rs-steps .rs-body b{color:var(--ink)}
+
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-size:12.5px;color:var(--ink-3)}
+.footer a{color:var(--ink-2)}
+.footer .src{font-family:var(--font-m);font-size:11.5px}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Quality Auditing · Site Inspections · Incident Investigation · Zero Harm · Interview Trainer</p>
+      <h1>Inspect, raise, close, trend — <span class="reg">the auditor's loop on the Homes NSW contract</span></h1>
+      <p class="lede">One discipline, four fronts: site inspections to Contract KPI, BIFs for every non-conformance, incident investigations to closure, and a monthly report with trend analysis — all recorded in <span class="mono">WMS</span> against the Work Order, inside The Downer Standard and Zero Harm.</p>
+      <p class="howto">How to use: <b>pick a module tab</b>, then <b>click each stage</b> of the loop to drill down. <b>Route a scenario</b> through the auditor's playbook, then <b>test yourself</b> in the quiz.</p>
+    </div>
+    <aside class="stamp" aria-hidden="true">
+      <span class="tick">✔</span>
+      <div class="rule">IF IT'S NOT IN WMS, IT DIDN'T HAPPEN</div>
+      <div class="sub">THE GOLDEN RULE · RAISE IT · TRACK IT · CLOSE IT · TREND IT</div>
+    </aside>
+  </header>
+
+  <!-- EVIDENCE PIPELINE -->
+  <nav class="pipeline" aria-label="The auditor's loop">
+    <div class="pipe-step"><span class="n">01</span><div><div class="t">Pre-Inspect</div><div class="s">Planned to Contract KPI minimums, per zone</div></div></div>
+    <span class="pipe-arrow" aria-hidden="true">→</span>
+    <div class="pipe-step"><span class="n">02</span><div><div class="t">Raise BIFs</div><div class="s">Every non-conformance, owner + due date</div></div></div>
+    <span class="pipe-arrow" aria-hidden="true">→</span>
+    <div class="pipe-step"><span class="n">03</span><div><div class="t">Root Cause</div><div class="s">5 Whys · Fishbone · ICAM — with the crew</div></div></div>
+    <span class="pipe-arrow" aria-hidden="true">→</span>
+    <div class="pipe-step"><span class="n">04</span><div><div class="t">Close CAPA</div><div class="s">Escalate in writing before the due date</div></div></div>
+    <span class="pipe-arrow" aria-hidden="true">→</span>
+    <div class="pipe-step"><span class="n">05</span><div><div class="t">Report &amp; Trend</div><div class="s">Monthly report, formally presented</div></div></div>
+    <span class="pipe-arrow" aria-hidden="true">→</span>
+    <div class="pipe-step"><span class="n">06</span><div><div class="t">Audit Focus</div><div class="s">Trends shape next month's focus</div></div></div>
+  </nav>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tabrow" role="tablist" aria-label="Learning modules">
+      <button class="tab" role="tab" aria-selected="true" data-tab="loop"><span class="em">🧭</span>The Audit Loop</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="inspect"><span class="em">🛠️</span>Site Inspections</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="incident"><span class="em">🚨</span>Incidents</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="zeroharm"><span class="em">🦺</span>Zero Harm &amp; WHS</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tds"><span class="em">🏛️</span>ISO 9001 &amp; TDS</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="audit"><span class="em">🔍</span>Audit Method</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="contract"><span class="em">🏠</span>Homes NSW Contract</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="trades"><span class="em">🏚️</span>Trade Standards</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="docs"><span class="em">📋</span>Docs &amp; Records</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="router"><span class="em">🧩</span>Scenario Router</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="quiz"><span class="em">✅</span>Quiz</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="acro"><span class="em">🔤</span>Acronyms</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="exp"><span class="em">💼</span>My Experience</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="cheat"><span class="em">📚</span>Cheat Sheet</button>
+    </div>
+  </div>
+
+  <!-- ============ PANEL: THE AUDIT LOOP ============ -->
+  <section class="panel" role="tabpanel" id="panel-loop">
+    <h2>The 10-step auditor's loop</h2>
+    <p class="subhead">The full protocol, spoken as a ~2-minute interview answer: <i>"My loop starts with the schedule, not the site — I plan pre-inspections to meet the Contract KPI minimums, then every visit follows the same spine: inspect to the standard, raise a BIF for every non-conformance, close it with an owner and a date, and feed the trend into the monthly report."</i></p>
+    <ol class="checklist">
+      <li><b>Plan to KPI.</b> Schedule planned pre-inspections across the zone to meet the Contract KPI minimums — then post-inspections on <b>every</b> pre-inspection, and WIP/post inspections to the zone's targets.</li>
+      <li><b>Inspect to the standard, not to opinion.</b> Workmanship, site safety, contractor compliance against the contract, the SWMS and the Work Order. Criteria are written down before the visit (ITPs, checklists).</li>
+      <li><b>Raise a BIF for every non-conformance.</b> Specifics: what, where, which requirement it breaches, evidence attached, one owner, one due date.</li>
+      <li><b>Verify the claim.</b> Subcontractor claims are verified against the inspection record — only conforming work gets paid.</li>
+      <li><b>Root cause with the crew.</b> 5 Whys, Fishbone, ICAM — with the people who did the work, not at them.</li>
+      <li><b>Close corrective AND preventive actions.</b> Track to completion; escalate <b>in writing before the due date</b> if anything slips.</li>
+      <li><b>Record everything in WMS.</b> Inspections, investigations, communications — saved against the specific Work Order, updated as actions complete.</li>
+      <li><b>Investigate incidents to the same spine.</b> Zero Harm/OHS, Code of Conduct, Environmental — make safe, investigate, distribute, close the Homes NSW notices (CIR/CIN/NCN).</li>
+      <li><b>Report monthly with trend analysis.</b> The monthly Inspection &amp; Auditing Report: all inspections plus commentary and non-conformance trends — formally presented.</li>
+      <li><b>Feed the audit focus.</b> Trends from this month shape the next month's Inspection &amp; Audit Focus — one BIF becomes a prevention.</li>
+    </ol>
+    <div class="pattern"><span class="p-icon">🔑</span><div class="p-body"><b>The golden rule:</b> if it's not in WMS, it didn't happen. The two orderings interviewers probe: <b>make safe BEFORE documenting</b> (incidents), and <b>escalate in writing BEFORE the due date</b> (actions). Say both the right way round.</div></div>
+  </section>
+
+  <!-- ============ PANEL: SITE INSPECTIONS ============ -->
+  <section class="panel" role="tabpanel" id="panel-inspect" hidden>
+    <h2>🛠️ Site inspections — the contract's compliance engine</h2>
+    <p class="subhead">The PD's first KRA: pre-inspections, post-inspections, WIP inspections and subcontractor claim verification — all to Contract KPI targets for the zone, all feeding the monthly report.</p>
+    <div class="stepper" role="tablist" aria-label="Inspection stages">
+      <button class="stage eess-sel" role="tab" aria-selected="true" data-stage="i0">1. Schedule</button>
+      <button class="stage eess-sel" role="tab" aria-selected="false" data-stage="i1">2. Pre-inspect</button>
+      <button class="stage eess-sel" role="tab" aria-selected="false" data-stage="i2">3. Raise BIFs</button>
+      <button class="stage eess-sel" role="tab" aria-selected="false" data-stage="i3">4. Post-inspect</button>
+      <button class="stage eess-sel" role="tab" aria-selected="false" data-stage="i4">5. Verify claims</button>
+      <button class="stage eess-sel" role="tab" aria-selected="false" data-stage="i5">6. Report &amp; trend</button>
+    </div>
+    <div class="stagedetail" id="stage-i0">
+      <h4>Schedule to the KPI, not to the week</h4>
+      <p>The inspection program is planned: pre-inspections meeting the <b>Contract KPI requirements as a minimum</b>, post-inspections on all of them, plus WIP and post inspections to hit the zone's targets — and additional inspections per the <b>monthly Inspection &amp; Audit Focus</b> as directed by the Assurance and SDP Manager.</p>
+      <ul>
+        <li>The KPI is the floor, not the ceiling — the monthly focus adds direction</li>
+        <li>WIP inspections catch defects while they're still cheap to fix</li>
+        <li>The schedule lives in WMS so every visit links to a Work Order</li>
+      </ul>
+      <div class="verdict"><b>Interview nuance:</b> "meeting Contract KPI requirements as a minimum" is the PD's exact wording — quote it back. They're testing whether you've read the document.</div>
+    </div>
+    <div class="stagedetail" id="stage-i1" hidden>
+      <h4>The pre-inspection — what you're actually checking</h4>
+      <p>A pre-inspection is planned, announced and criteria-driven. On a housing maintenance job you check four things:</p>
+      <ul>
+        <li><b>Workmanship</b> — against the trade standard and the scope: is the repair done right? (AS/NZS 3000 electrical, AS/NZS 5601 gas, AS/NZS 3500 plumbing, NCC…)</li>
+        <li><b>Site safety</b> — SWMS on site and followed, housekeeping, PPE, safe work method actually in use</li>
+        <li><b>Contractor compliance</b> — licensed trades, inductions done, contract obligations met</li>
+        <li><b>Scope &amp; progress</b> — the work matches the Work Order; progress against the schedule</li>
+      </ul>
+      <div class="verdict"><b>Rule of thumb:</b> inspect to the written criteria — the PD asks the auditor to assess "workmanship, site safety and contractor compliance". Trade-standard fluency is what separates an auditor from a box-ticker.</div>
+    </div>
+    <div class="stagedetail" id="stage-i2" hidden>
+      <h4>BIFs — the contract's corrective-action engine</h4>
+      <p>Every non-conformance found during inspections becomes a <b>Business Improvement Form</b>. A good BIF is complete and specific:</p>
+      <ul>
+        <li>What was found, where, against which requirement (contract clause, standard, SWMS, work order)</li>
+        <li>Evidence — photos, measurements, records</li>
+        <li>Root cause (5 Whys / Fishbone run with the subcontractor)</li>
+        <li>Corrective AND preventive actions, one owner, one due date</li>
+        <li>Followed up to completion — outstanding corrective actions are the contract's biggest pain point</li>
+      </ul>
+      <div class="verdict"><b>Why "BIF" matters:</b> Downer's name for the NCR is a Business Improvement Form — the framing is improvement, not blame. Mirror that framing in the interview.</div>
+    </div>
+    <div class="stagedetail" id="stage-i3" hidden>
+      <h4>Post-inspections — the loop that makes pre-inspections mean something</h4>
+      <p>The PD requires a <b>post-inspection on all pre-inspections</b>: verify the corrective actions actually landed, the BIF is closed with evidence, and the work now conforms. WIP and post inspections round out the month's coverage to the KPI targets.</p>
+      <ul>
+        <li>A pre-inspection without a post-inspection is half a loop</li>
+        <li>Closure means verified on site — not "the subcontractor said it's done"</li>
+        <li>Update WMS against the Work Order as actions are confirmed complete</li>
+      </ul>
+    </div>
+    <div class="stagedetail" id="stage-i4" hidden>
+      <h4>Subcontractor claim verification</h4>
+      <p>The claim is checked against the <b>inspection record</b>: work complete, conforming to the ITP and scope, defects closed, evidence attached. No verification without site evidence.</p>
+      <ul>
+        <li>Only conforming work gets paid — claim verification protects the contract's money</li>
+        <li>Discrepancies go to the BIF/defect process, then back to the claim</li>
+        <li>Your edge: you standardised ITPs across 50+ vendors for construction clients, cutting discrepancies 40%</li>
+      </ul>
+      <div class="verdict"><b>Commercial angle:</b> the PD says the auditor represents Downer Homes to resolve contractual issues with Homes NSW — claim verification is where quality discipline meets commercial discipline.</div>
+    </div>
+    <div class="stagedetail" id="stage-i5" hidden>
+      <h4>The monthly Inspection &amp; Auditing Report</h4>
+      <p>The month closes with a formal report: <b>all inspections completed in the zone, with commentary and trend analysis of non-conformances raised</b> — then formally presented monthly or as directed.</p>
+      <ul>
+        <li>Commentary = what the numbers mean (not just the numbers)</li>
+        <li>Trend analysis = which non-conformances recur, by trade, by subcontractor, by type</li>
+        <li>The trends feed the next month's Inspection &amp; Audit Focus — the loop closes</li>
+        <li>Your evidence: automated dashboards cut your reporting lead time 70% in previous roles</li>
+      </ul>
+    </div>
+
+    <h3 style="margin:26px 0 2px;font-size:17px">🧾 The BIF lifecycle — step by step</h3>
+    <p class="subhead">"Raise Business Improvement Forms for all non-conformances identified during inspections and follow-up completion of outstanding corrective actions." How that actually runs. Click each step.</p>
+    <div class="rs-steps">
+      <details open>
+        <summary><span class="rs-n">STEP 1</span> Raise with specifics</summary>
+        <div class="rs-body">The BIF records <b>what, where, against which requirement</b> — contract clause, trade standard, SWMS, Work Order — with evidence attached (photos, measurements). A vague BIF dies in argument; a specific one closes.</div>
+      </details>
+      <details>
+        <summary><span class="rs-n">STEP 2</span> Assign owner + due date</summary>
+        <div class="rs-body">One owner — the subcontractor supervisor, DSS or process owner — and <b>one due date</b>. No committee ownership: "everyone's job" means nobody's job.</div>
+      </details>
+      <details>
+        <summary><span class="rs-n">STEP 3</span> Root cause with the crew</summary>
+        <div class="rs-body">5 Whys, Fishbone or ICAM with the people who did the work. The corrective action fixes the defect; the <b>preventive</b> action fixes the cause.</div>
+      </details>
+      <details>
+        <summary><span class="rs-n">STEP 4</span> Follow up to completion</summary>
+        <div class="rs-body">Track outstanding corrective actions — this is a named PD duty. <b>Escalate in writing before the due date</b> to the SDP Manager and Regional Manager if anything threatens it.</div>
+      </details>
+      <details>
+        <summary><span class="rs-n">STEP 5</span> Verify and close</summary>
+        <div class="rs-body">Closure is <b>verified on site</b> (the post-inspection), recorded in WMS against the Work Order, and the BIF is closed with evidence.</div>
+      </details>
+      <details>
+        <summary><span class="rs-n">STEP 6</span> Trend it</summary>
+        <div class="rs-body">The BIF's type, trade and subcontractor feed the monthly trend analysis — and next month's audit focus. One BIF is a case; three are a pattern.</div>
+      </details>
+    </div>
+    <div class="pattern eess"><span class="p-icon">🏠</span><div class="p-body"><b>Downer angle:</b> BIFs on a housing contract carry a tenant — a non-conformance means a family living with the defect. Closure speed is tenant welfare, not just compliance. That's the framing that lands in the interview.</div></div>
+  </section>
+
+  <!-- ============ PANEL: INCIDENTS ============ -->
+  <section class="panel" role="tabpanel" id="panel-incident" hidden>
+    <h2>🚨 Incident investigation &amp; reporting</h2>
+    <p class="subhead">The PD's second KRA: investigate and report all <b>Zero Harm/OHS, Code of Conduct and Environmental</b> incidents in the zone — including corrective and preventive actions, followed up to completion, and Homes NSW's notices (CIR/CIN/NCN) closed and signed off.</p>
+    <div class="stepper" role="tablist" aria-label="Incident stages">
+      <button class="stage fire-sel" role="tab" aria-selected="true" data-stage="n0">1. Make safe</button>
+      <button class="stage fire-sel" role="tab" aria-selected="false" data-stage="n1">2. Report &amp; notify</button>
+      <button class="stage fire-sel" role="tab" aria-selected="false" data-stage="n2">3. Investigate</button>
+      <button class="stage fire-sel" role="tab" aria-selected="false" data-stage="n3">4. Correct &amp; prevent</button>
+      <button class="stage fire-sel" role="tab" aria-selected="false" data-stage="n4">5. Distribute &amp; close</button>
+      <button class="stage fire-sel" role="tab" aria-selected="false" data-stage="n5">6. WMS &amp; trends</button>
+    </div>
+    <div class="stagedetail" id="stage-n0">
+      <h4>First hour: make it safe</h4>
+      <p>Stop or isolate the work, get people clear, notify the supervisor on site. <b>Making safe comes before documenting</b> — the ordering trap interviewers probe.</p>
+      <ul>
+        <li>Preserve the scene for the investigation (WHS Act s 39 for notifiable incidents — no disturbance before the inspector arrives)</li>
+        <li>Notifiable incidents — death, serious injury/illness, dangerous incident — must be notified to SafeWork NSW <b>immediately</b> (WHS Act ss 35–38)</li>
+        <li>Support any injured person and bystanders first</li>
+      </ul>
+      <div class="verdict"><b>Say it the right way round:</b> make safe → notify → preserve → investigate. Never investigate → document → make safe.</div>
+    </div>
+    <div class="stagedetail" id="stage-n1" hidden>
+      <h4>Report and notify</h4>
+      <p>Report through the system immediately: incident recorded in <b>WMS against the Work Order</b>, Zero Harm report raised, and internal notifications per the contract's escalation rules.</p>
+      <ul>
+        <li>Escalate in writing <b>before the due date</b> anything that may delay the investigation and reporting (PD duty)</li>
+        <li>Notifiable incidents go to SafeWork NSW immediately — internal notification never replaces it</li>
+        <li>Your evidence: a real-time incident dashboard cut investigation time from 72 hours to under 24 in a previous role</li>
+      </ul>
+    </div>
+    <div class="stagedetail" id="stage-n2" hidden>
+      <h4>Investigate to root cause</h4>
+      <p>Lead with <b>5 Whys, Fishbone, fault-tree analysis or ICAM</b> — with the people involved in the room. The investigation covers Zero Harm/OHS, Code of Conduct and Environmental incidents alike.</p>
+      <ul>
+        <li>ICAM (Incident Cause Analysis Method) is the standard AU industry approach — organisational factors, not just the person</li>
+        <li>A good investigation finds the system failure, not the scapegoat</li>
+        <li>Complete reports by the <b>requested completion dates</b> — Homes NSW's dates or the internal ones, whichever binds</li>
+      </ul>
+      <div class="verdict"><b>The PD's full scope:</b> investigations cover OHS, Code of Conduct AND Environmental incidents — a Code of Conduct complaint is investigated with the same rigour as an injury.</div>
+    </div>
+    <div class="stagedetail" id="stage-n3" hidden>
+      <h4>Corrective AND preventive actions</h4>
+      <p>The report names corrective actions (fix what happened) and <b>preventive</b> actions (stop it recurring) — each with an owner and a due date, followed up to completion.</p>
+      <ul>
+        <li>The PD is explicit: "documenting the required corrective and preventive actions and following up of those actions to completion"</li>
+        <li>Preventive actions are where Zero Harm actually happens — the fix for the system, not the event</li>
+        <li>Update WMS as actions are confirmed complete</li>
+      </ul>
+    </div>
+    <div class="stagedetail" id="stage-n4" hidden>
+      <h4>Distribute and close the loop</h4>
+      <p>The PD names the distribution list — completed reports go to:</p>
+      <ul>
+        <li><b>Contract Manager</b> · <b>Assurance &amp; SDP Manager</b> · <b>Regional Managers</b></li>
+        <li><b>Homes NSW Managers</b> (where directed) · <b>Helpdesk Manager</b> (where relevant)</li>
+        <li><b>Tenants</b> are advised of investigation outcomes where they're involved</li>
+        <li>Homes NSW's CIR, CIN &amp; NCN notices are completed and <b>signed off</b></li>
+      </ul>
+      <div class="verdict"><b>Why the distribution list matters:</b> quoting it in the interview proves you've read the PD — it's the kind of detail that separates a rehearsed answer from a researched one.</div>
+    </div>
+    <div class="stagedetail" id="stage-n5" hidden>
+      <h4>WMS hygiene and trends</h4>
+      <p>All investigation and inspection reports, details and communications are <b>saved into WMS against the specific Work Order</b>, updated as actions complete. Then the auditor's value-add:</p>
+      <ul>
+        <li><b>Identify incident-related non-conformance trends</b> and assist developing the monthly audit focuses</li>
+        <li>One NCN is a case; three are a pattern — the pattern is what the audit focus chases</li>
+        <li>Tenant outcomes communicated — closure isn't closed until the people are told</li>
+      </ul>
+      <div class="verdict"><b>Where compliance dies:</b> incidents closed in the system but not learned from. The trend analysis in the monthly report is what turns incidents into prevention.</div>
+    </div>
+
+    <h3 style="margin:26px 0 2px;font-size:17px">🧾 Investigation report — the anatomy</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Section</th><th>What it must contain</th><th>PD twist</th></tr></thead>
+        <tbody>
+          <tr><td><b>Basics</b></td><td>Date, time, location, Work Order number, people involved, incident type (OHS / Code of Conduct / Environmental)</td><td>Saved in WMS against the specific Work Order</td></tr>
+          <tr><td><b>What happened</b></td><td>Factual timeline — evidence, photos, statements; no blame language</td><td>Scene preserved where notifiable</td></tr>
+          <tr><td><b>Root cause</b></td><td>5 Whys / Fishbone / ICAM — organisational factors included</td><td>System failure, not scapegoat</td></tr>
+          <tr><td><b>Actions</b></td><td>Corrective AND preventive actions, owners, due dates</td><td>Followed up to completion</td></tr>
+          <tr><td><b>Distribution</b></td><td>Contract Manager · SDP Manager · Regional Managers · Homes NSW (where directed) · Helpdesk (where relevant)</td><td>Escalated in writing before the due date if delayed</td></tr>
+          <tr><td><b>Closure</b></td><td>Actions verified complete, sign-off, tenant advised where involved, trend logged</td><td>CIR/CIN/NCN completed and signed off</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PANEL: ZERO HARM & WHS ============ -->
+  <section class="panel" role="tabpanel" id="panel-zeroharm" hidden>
+    <h2>🦺 Zero Harm &amp; the NSW WHS framework</h2>
+    <p class="subhead">Zero Harm is Downer's safety brand — integrated into The Downer Standard under ISO 45001, with <b>Cardinal Rules</b> for critical risks. The PD's Safety KRA mirrors the NSW WHS regime: the <span class="mono">WHS Act 2011 (NSW)</span>, <span class="mono">WHS Regulation 2017 (NSW)</span>, and SafeWork NSW (the PD's "WorkCover" — WorkCover NSW became SafeWork NSW in 2015).</p>
+
+    <h3 style="margin:20px 0 0;font-size:15px">Risk levels &amp; the hierarchy of controls</h3>
+    <div class="grid g3">
+      <div class="card lv l1"><span class="lv-n">Low · Monitor</span><h3>Routine maintenance risks</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">General housekeeping, minor repairs, admin controls sufficient</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">JSA/SWMS may be simple; standard procedures apply</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Auditor verifies the control exists and is used</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n">Medium · Control</span><h3>Trade work with exposure</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Electrical, gas, working at height on single-storey, hot work</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">SWMS required for high-risk construction work (Reg 291 list)</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Controls must be job-specific, not a generic template</li>
+        </ul>
+      </div>
+      <div class="card lv l3"><span class="lv-n">High · Stop &amp; verify</span><h3>High-risk construction work</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Falls &gt;2 m, asbestos, confined spaces, demolition, live services — the Reg 291 categories</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">SWMS mandatory, licence checks, supervision matched to capability</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Auditor's call: make safe first, then investigate</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pattern"><span class="p-icon">🪜</span><div class="p-body"><b>The hierarchy of controls</b> (WHS Reg 36) — say it in order: <b>1. Eliminate</b> the hazard → <b>2. Substitute</b> with something safer → <b>3. Isolate</b> people from it → <b>4. Engineering</b> controls → <b>5. Administrative</b> controls (procedures, training, SWMS) → <b>6. PPE</b> (last line, never the first). An auditor who quotes the hierarchy sounds like a safety professional, not a safety tourist.</div></div>
+
+    <h3 style="margin:20px 0 0;font-size:15px">The WHS framework — what the auditor leans on</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Instrument</th><th>What it does</th><th>Where the auditor uses it</th></tr></thead>
+        <tbody>
+          <tr><td class="mono"><b>WHS Act 2011 (NSW)</b></td><td>The duties: PCBU primary duty of care (s 19), officer due diligence (s 27), worker duties (s 28), consultation (ss 46–49), notifiable incidents (ss 35–38), scene preservation (s 39)</td><td>Incident investigation, contractor duty checks, Code of Conduct-adjacent diligence</td></tr>
+          <tr><td class="mono"><b>WHS Regulation 2017 (NSW)</b></td><td>Risk management (cl 32–38), SWMS for high-risk construction work (cl 291 categories, cl 299 content), falls (Part 4.4), hazchem (Part 7.1), asbestos (Chapter 8)</td><td>SWMS reviews at sign-up, site inspection criteria, high-risk work verification</td></tr>
+          <tr><td class="mono"><b>SafeWork NSW</b></td><td>The regulator (formerly WorkCover NSW — the PD still says "WorkCover requirements")</td><td>Notifiable incident reporting, licence verifications, prosecutions context</td></tr>
+          <tr><td class="mono"><b>ISO 45001:2018</b></td><td>Occupational health &amp; safety management systems — certified inside The Downer Standard</td><td>Hazard and incident registers, Zero Harm accountabilities, the safety agenda item</td></tr>
+          <tr><td class="mono"><b>Downer Cardinal Rules</b></td><td>Downer's non-negotiable critical-risk controls</td><td>Zero-tolerance verification on site — name them when you've read the document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:20px 0 0;font-size:15px">SWMS — the sign-up gate</h3>
+    <div class="grid g2">
+      <div class="card"><h3>What the PD requires</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Review subcontractor SWMS <b>at sign-up</b> — the gate, not an afterthought</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Authorise only if they meet <b>all WorkCover/SafeWork NSW requirements</b></li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Reg 299 content: the high-risk work, the hazards, the controls, how controls are implemented — job-specific, not a generic template</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Pair with inductions: you train new employees and subcontractors on contract requirements and WMS</li>
+        </ul>
+      </div>
+      <div class="card"><h3>The auditor's test on site</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Is the SWMS <b>on site</b> and does the work match it?</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">A signed SWMS that isn't followed is paperwork, not safety</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Safety is a standing agenda item at every workgroup meeting (PD)</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Zero Harm responsibilities communicated to contractors in your area of control (PD)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pattern fire"><span class="p-icon">🧠</span><div class="p-body"><b>Interview line:</b> "Zero Harm isn't fewer incidents — it's none, with the system built for it: registers aligned to ISO 45001, safety on every agenda, supervision matched to capability, and Zero Harm communicated to every contractor. I've driven a zero-accident culture across metro and regional sites and cut incidents 20% in six months with hazard assessments and dashboards."</div></div>
+  </section>
+
+  <!-- ============ PANEL: ISO 9001 & TDS ============ -->
+  <section class="panel" role="tabpanel" id="panel-tds" hidden>
+    <h2>🏛️ ISO 9001 &amp; The Downer Standard — the house the whole job lives in</h2>
+    <p class="subhead">The PD is explicit: <b>"adhere to and promote the Company's Quality Management System (Certified to ISO 9001) and internal business systems such as the TDS."</b> TDS = <b>The Downer Standard</b> — Downer's integrated management system, holding a single certification to ISO 9001, ISO 14001, ISO 27001 and ISO 45001, and containing the <b>10 Quality Principles</b> (the PD's DG-QA-PN001 is a TDS document). ISO 9001 is built on the <b>process approach</b>, <b>PDCA</b> and <b>risk-based thinking</b> — say those three words early in any QMS answer.</p>
+
+    <h3 style="margin:20px 0 0;font-size:15px">The seven quality management principles (ISO 9000)</h3>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">1 · Customer focus</span><div class="def">Meet and exceed customer requirements — on this contract the customer is Homes NSW AND the tenant in the home.</div></div>
+      <div class="acro"><span class="term">2 · Leadership</span><div class="def">Quality policy, direction, alignment — the PD's "Delivery (Quality)" KRA: define and model quality leadership behaviours.</div></div>
+      <div class="acro"><span class="term">3 · Engagement of people</span><div class="def">Competent, empowered people — "a QMS lives or dies on the floor" — and with subcontractors, at their site.</div></div>
+      <div class="acro"><span class="term">4 · Process approach</span><div class="def">Manage work as linked processes — BPMN/As-Is/To-Be mapping is your native language.</div></div>
+      <div class="acro"><span class="term">5 · Improvement</span><div class="def">Continual improvement as permanent behaviour — BIFs, OFIs, CAPA trends, the monthly audit focus.</div></div>
+      <div class="acro"><span class="term">6 · Evidence-based decision making</span><div class="def">Decisions on data — inspection records, SPC, Power BI dashboards, audit findings.</div></div>
+      <div class="acro"><span class="term">7 · Relationship management</span><div class="def">Subcontractors, Homes NSW, DCJ, regulators — the PD's purpose statement is literally about managing those relationships.</div></div>
+    </div>
+
+    <h3 style="margin:22px 0 0;font-size:15px">The clause map — clauses 4 to 10 on this contract</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Clause</th><th>What it covers</th><th>Where you'd show it at Downer</th></tr></thead>
+        <tbody>
+          <tr><td class="mono"><b>4 — Context</b></td><td>Organisation, interested parties, QMS scope</td><td>Downer, subcontractors, Homes NSW, DCJ, tenants — five interested parties in one scope</td></tr>
+          <tr><td class="mono"><b>5 — Leadership</b></td><td>Policy, roles, responsibilities, authorities</td><td>The SDP Manager's accountabilities; auditor authority to raise BIFs and escalate</td></tr>
+          <tr><td class="mono"><b>6 — Planning</b></td><td>Risks &amp; opportunities, quality objectives</td><td>The contract KPI targets as objectives; the risk register behind the audit focus</td></tr>
+          <tr><td class="mono"><b>7 — Support</b></td><td>Resources, competence, awareness, documented information</td><td>Registers and records across SharePoint and WMS; training and inductions</td></tr>
+          <tr><td class="mono"><b>8 — Operation</b></td><td>Design, production, supplier control, release</td><td><b>Where the inspections live</b> — subcontractor control, claim verification, SWMS gates, release = conforming work</td></tr>
+          <tr><td class="mono"><b>9 — Performance evaluation</b></td><td>Monitoring, internal audit, management review</td><td>The inspection &amp; audit program + KPI dashboards you've run for years</td></tr>
+          <tr><td class="mono"><b>10 — Improvement</b></td><td>Nonconformity, corrective action, continual improvement</td><td>The BIF→CAPA lifecycle below — the heart of the daily job</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:22px 0 0;font-size:15px">The BIF → CAPA lifecycle (Downer's house style)</h3>
+    <ol class="checklist">
+      <li><b>Raise</b> — the BIF with all fields complete: what, where, requirement, evidence, owner, due date.</li>
+      <li><b>Notify</b> — relevant owners informed on occurrence, not at month-end.</li>
+      <li><b>Root cause</b> — investigation to true cause: 5 Whys, Fishbone, ICAM — not symptom-patching.</li>
+      <li><b>Corrective &amp; preventive action</b> — CAPA established and recorded, owner + due date.</li>
+      <li><b>Follow-up</b> — chase outstanding corrective actions; escalate in writing before the due date.</li>
+      <li><b>Verify effectiveness</b> — the post-inspection confirms it stayed fixed, then closure.</li>
+      <li><b>Trend &amp; improve</b> — trends feed the monthly report and next month's audit focus.</li>
+    </ol>
+
+    <div class="pattern"><span class="p-icon">🧠</span><div class="p-body"><b>Interview lines:</b> "The TDS is the house, and the 10 Quality Principles are the rules of the house — I'd learn DG-QA-PN001 in the first week and audit against it." · "ISO 9001 clause 8 is where subcontractor control lives; clause 9 is where my audit program lives; clause 10 is the BIF lifecycle." · On closure speed: "A BIF left open at month-end is a small defect that became a tenant complaint. Raise, notify, root-cause, close — in days."</div></div>
+    <div class="pattern warn"><span class="p-icon">📚</span><div class="p-body"><b>Likely questions:</b> ① "Walk me through your inspection and audit program." ② "A Homes NSW notice found a major non-conformance — what happens next?" ③ "How do you keep registers and records accurate across SharePoint and WMS?" ④ "What does the monthly report actually do for the contract?" ⑤ "How does ISO 9001 connect to the field work on this contract?" — full model answers in the War Room flashcards.</div></div>
+  </section>
+
+  <!-- ============ PANEL: AUDIT METHOD ============ -->
+  <section class="panel" role="tabpanel" id="panel-audit" hidden>
+    <h2>🔍 Audit method — ISO 19011, and audit vs inspection</h2>
+    <p class="subhead">The PD blends two disciplines: <b>inspections</b> (field checks of workmanship, safety, compliance against standards) and <b>audits</b> (system checks of subcontractors and internal processes per the monthly focus). Knowing the difference — and quoting ISO 19011 — is what a trained auditor sounds like.</p>
+
+    <div class="grid g2">
+      <div class="card"><h3>Inspection</h3><span class="code">AS/NZS ISO/IEC 17020 — inspection bodies</span>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px"><b>Examines a thing</b> — workmanship, a site, a claim — against requirements</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Output: pass/fail, BIF, claim verdict — evidence-based</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">The pre/post/WIP inspection regime is inspection work</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Audit</h3><span class="code">ISO 19011:2018 — auditing management systems</span>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px"><b>Examines a system</b> — a subcontractor's or process's management controls</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Output: conformity / nonconformity / OFI findings against criteria</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">The monthly "auditing of subcontractors and internal staff and processes" is audit work</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:20px 0 0;font-size:15px">The ISO 19011 audit lifecycle</h3>
+    <ol class="checklist">
+      <li><b>Initiate</b> — audit program, objectives, scope, criteria; the monthly Inspection &amp; Audit Focus sets these.</li>
+      <li><b>Prepare</b> — document review, checklist, plan; contact the auditee (subcontractor or process owner).</li>
+      <li><b>Conduct</b> — opening meeting, evidence collection (documents, interviews, observation — and on this contract, site verification), findings.</li>
+      <li><b>Report</b> — findings classified: conformity, nonconformity, OFI; conclusions; distributed to the right stakeholders.</li>
+      <li><b>Complete</b> — records retained; in WMS against the relevant Work Order where applicable.</li>
+      <li><b>Follow-up</b> — corrective actions verified to closure — the post-inspection / re-audit loop.</li>
+    </ol>
+
+    <h3 style="margin:20px 0 0;font-size:15px">The seven audit principles — say three, it's enough</h3>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">Integrity</span><div class="def">Professionalism, honesty — the foundation of audit trust.</div></div>
+      <div class="acro"><span class="term">Fair presentation</span><div class="def">Report truthfully and accurately — findings, conclusions and obstacles.</div></div>
+      <div class="acro"><span class="term">Due professional care</span><div class="def">Judgment in proportion to the task — the auditor's decisions matter.</div></div>
+      <div class="acro"><span class="term">Confidentiality</span><div class="def">Information security — tenant data and commercial data stay protected.</div></div>
+      <div class="acro"><span class="term">Independence</span><div class="def">Impartial and objective — especially auditing subcontractors you also work alongside.</div></div>
+      <div class="acro"><span class="term">Evidence-based approach</span><div class="def">Findings are verifiable — "if it's not in WMS, it didn't happen" is an evidence rule.</div></div>
+      <div class="acro"><span class="term">Risk-based approach</span><div class="def">Focus audit effort where risk is highest — the monthly audit focus in action.</div></div>
+    </div>
+
+    <div class="pattern"><span class="p-icon">🧠</span><div class="p-body"><b>Interview line that ties it together:</b> "ISO 19011 is the discipline of how I audit, ISO 17020 is the discipline of how I inspect, and ISO 9001 inside the TDS is the system both feed. Inspection finds the defect; audit finds the system that allowed it; the BIF closes both."</div></div>
+  </section>
+
+  <!-- ============ PANEL: HOMES NSW CONTRACT ============ -->
+  <section class="panel" role="tabpanel" id="panel-contract" hidden>
+    <h2>🏠 The Homes NSW contract — the world you'd be auditing</h2>
+    <p class="subhead">Downer's <b>$860M Homes NSW maintenance contract</b> (awarded June 2024, commenced 1 July 2024) covers <b>contract areas 9, 12 &amp; 13</b> — Inner City Sydney, Southern Tablelands, South Coast, Macarthur/Southern Highlands, Illawarra — roughly <b>24,000 dwellings</b>, on a term of up to 10 years. Scope: responsive maintenance, capital upgrades, vacant restorations, home modifications, lawns/grounds/cleaning.</p>
+
+    <div class="grid g3">
+      <div class="card lv l3"><span class="lv-n">The client</span><h3>Homes NSW &amp; DCJ</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Homes NSW (launched 2024) consolidated the LAHC housing portfolio — the PD still says "Hub/LAHC"</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Sits under the <b>Department of Communities and Justice (DCJ)</b></li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Maintenance coordinated through a central <b>Maintenance Hub</b></li>
+          <li style="font-size:12.5px;color:var(--ink-2)">The PD's external relationships: Homes, DCJ, SDP</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n">The commercial context</span><h3>KPI regime &amp; benchmarks</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Inspection and audit activity is measured against <b>Contract KPI targets per zone</b></li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Ventia won the parallel Homes NSW contract — combined awards ~$1.4B; quality/KPI performance is compared</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">20+ year LAHC partnership — Downer is an incumbent, not a newcomer</li>
+        </ul>
+      </div>
+      <div class="card lv l1"><span class="lv-n">The team</span><h3>Who the auditor works with</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px"><b>Assurance &amp; SDP Manager</b> — reporting line (PD); <b>QA Manager</b> — reporting line (SEEK ad)</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px"><b>DSS</b> — Delivery Service Supervisors; Regional Managers; Regional Teams</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px"><b>Team Maven Leader</b> (PD working relationships); Zero Harm team; Helpdesk</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:22px 0 0;font-size:15px">The client's paper trail — Homes NSW notices</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Notice</th><th>What it is</th><th>The auditor's obligation (per PD)</th></tr></thead>
+        <tbody>
+          <tr><td class="mono"><b>CIR</b></td><td>Client information request / record — the client's query or direction trail</td><td>Investigate, respond, record in WMS</td></tr>
+          <tr><td class="mono"><b>CIN</b></td><td>Client instruction / corrective notice — a direction to fix something</td><td>Action to root cause, complete by the requested date</td></tr>
+          <tr><td class="mono"><b>NCN</b></td><td>Non-conformance notice — the client's formal non-compliance paper</td><td><b>Completion and sign-off</b> — the PD names CIR, CIN &amp; NCN sign-off as an explicit duty</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pattern warn"><span class="p-icon">⚠️</span><div class="p-body"><b>Honesty note:</b> the exact expansions of CIR/CIN/NCN are contract-internal — the PD doesn't expand them. In the interview, speak about them as "the client's formal notice trail — CIRs, CINs and NCNs — which the auditor completes and signs off" and confirm the precise definitions at induction. Never bluff an acronym expansion in front of the SDP Manager.</div></div>
+
+    <h3 style="margin:22px 0 0;font-size:15px">The systems</h3>
+    <div class="grid g2">
+      <div class="card"><h3>WMS — Work Management System</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Every inspection, investigation, report and communication saved <b>against the specific Work Order</b></li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Updated as corrective/preventive actions are confirmed complete</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">The golden rule lives here: if it's not in WMS, it didn't happen</li>
+        </ul>
+      </div>
+      <div class="card"><h3>TDS — The Downer Standard</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Integrated management system — one certification: ISO 9001 + 14001 + 27001 + 45001</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Contains the 10 Quality Principles (DG-QA-PN001 — the PD's Delivery KRA)</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Zero Harm integrated with Cardinal Rules for critical risks</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL: TRADE STANDARDS ============ -->
+  <section class="panel" role="tabpanel" id="panel-trades" hidden>
+    <h2>🏚️ Trade standards — the rulebooks the work is checked against</h2>
+    <p class="subhead">The PD prefers a <b>trade, construction, maintenance, facilities or building services background</b> "with practical experience assessing workmanship, site safety and contractor compliance". These are the standards behind every housing-maintenance inspection — you don't need to be a tradesperson, you need to know <b>which rulebook applies to which trade</b>.</p>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Standard</th><th>What it governs</th><th>Where it bites on a housing contract</th></tr></thead>
+        <tbody>
+          <tr><td class="mono"><b>AS/NZS 3000</b></td><td>The Wiring Rules — electrical installations</td><td>Rewires, switchboard upgrades, power points, lighting — the highest-consequence trade; certificate of compliance required for electrical work</td></tr>
+          <tr><td class="mono"><b>AS/NZS 3012</b></td><td>Electrical installations on construction/demolition sites</td><td>Capital upgrades and vacant restorations run as construction sites — temporary power, leads, testing</td></tr>
+          <tr><td class="mono"><b>AS/NZS 3760</b></td><td>In-service safety inspection &amp; testing (test &amp; tag) of electrical equipment</td><td>Contractor tools and appliances on site — the tag on the drill is an inspection point</td></tr>
+          <tr><td class="mono"><b>AS/NZS 5601.1</b></td><td>Gas installations</td><td>Gas cookers, heaters, hot water — gas work requires a licensed gasfitter; leak checks and certificates</td></tr>
+          <tr><td class="mono"><b>AS/NZS 3500</b></td><td>Plumbing and drainage</td><td>Leaks, bathrooms, kitchens, drainage — waterproofing and fall checks on wet areas</td></tr>
+          <tr><td class="mono"><b>AS 3740</b></td><td>Waterproofing of wet areas</td><td>Bathroom and laundry upgrades — the classic latent-defect source; membrane inspections before tiling</td></tr>
+          <tr><td class="mono"><b>AS 1851</b></td><td>Routine service of fire protection systems</td><td>Fire systems in multi-unit blocks — service registers, sprinkler and alarm checks</td></tr>
+          <tr><td class="mono"><b>AS 3786</b></td><td>Smoke alarms</td><td>Every dwelling — NSW requires compliant smoke alarms; replacement and interconnect checks</td></tr>
+          <tr><td class="mono"><b>AS/NZS 1841 / AS 2444</b></td><td>Portable fire extinguishers (construction / selection &amp; location)</td><td>Hot work areas, maintenance compounds</td></tr>
+          <tr><td class="mono"><b>NCC</b></td><td>National Construction Code — building work compliance</td><td>Any structural, waterproofing or fire-safety work — the umbrella over all building work</td></tr>
+          <tr><td class="mono"><b>Home Building Act 1989 (NSW)</b></td><td>Licensing, contracts and statutory warranties for residential building work</td><td>Licensed trades required — licence checks are part of subcontractor compliance at sign-up</td></tr>
+          <tr><td class="mono"><b>WHS Reg 2017 Ch 8</b></td><td>Asbestos management and removal</td><td>Pre-2003 homes — asbestos registers, licensed removal, the classic stop-work trigger</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pattern"><span class="p-icon">🧠</span><div class="p-body"><b>Interview line:</b> "I inspect workmanship against the trade's rulebook — electrical to AS/NZS 3000, gas to 5601, wet areas to AS 3740 — and contractor compliance against the licence and SWMS. The auditor doesn't do the trade; the auditor knows which standard the trade answers to, and verifies the evidence."</div></div>
+    <div class="pattern eess"><span class="p-icon">💼</span><div class="p-body"><b>Your honest gap — and the transfer:</b> you haven't audited housing maintenance specifically. What you have: construction QMS (multi-phase, rework −30%), ITPs standardised across 50+ construction vendors, defence manufacturing to ISO 3834.2, utilities and facilities to ISO 55001, and government infrastructure (DoJ corrective services, NSW Health). Say it plainly: "new sector, identical discipline — standard, evidence, closure."</div></div>
+  </section>
+
+  <!-- ============ PANEL: DOCS & RECORDS ============ -->
+  <section class="panel" role="tabpanel" id="panel-docs" hidden>
+    <h2>📋 Documents &amp; records — the auditor's paperwork</h2>
+    <p class="subhead">Two things interviewers can pin you on: <b>what goes in each document</b>, and <b>where each record lives</b>. Both below, from the PD and standard practice.</p>
+
+    <h3 style="margin:20px 0 0;font-size:15px">1 · The document set</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Document</th><th>What it contains</th><th>Where it lives</th></tr></thead>
+        <tbody>
+          <tr><td><b>Inspection record</b></td><td>Date, zone, Work Order, trade, scope checked, workmanship/safety/compliance findings, photos, outcome (conforming / BIF raised), claim-verification note</td><td>WMS against the Work Order</td></tr>
+          <tr><td><b>BIF</b></td><td>Non-conformance specifics, requirement breached, evidence, root cause, corrective + preventive actions, owner, due date, closure verification</td><td>WMS + the register the QA function maintains</td></tr>
+          <tr><td><b>Incident investigation report</b></td><td>Facts, timeline, root cause (5 Whys/Fishbone/ICAM), corrective + preventive actions, distribution list, tenant-advice note, sign-off</td><td>WMS against the Work Order; distributed by email to the named stakeholders</td></tr>
+          <tr><td><b>SWMS review record</b></td><td>Subcontractor, job, high-risk work covered, gap check vs SafeWork NSW requirements, authorisation decision, induction confirmation</td><td>Sign-up file; contract registers</td></tr>
+          <tr><td><b>Monthly Inspection &amp; Auditing Report</b></td><td>All inspections completed in the zone, commentary, non-conformance trend analysis, audit focus input — formally presented</td><td>Presented monthly to the SDP Manager / as directed</td></tr>
+          <tr><td><b>Quality registers</b></td><td>KPI, audit, compliance and performance dashboards; audit schedules; evidence packs</td><td>SharePoint + WMS + approved business systems (the SEEK ad's exact wording)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:24px 0 0;font-size:15px">2 · The monthly report structure — the PD's headline deliverable</h3>
+    <ol class="checklist">
+      <li><b>Coverage</b> — inspections completed in the zone: pre, post, WIP — against the KPI targets.</li>
+      <li><b>Non-conformances</b> — BIFs raised, open, overdue; corrective actions outstanding.</li>
+      <li><b>Trend analysis</b> — by trade, by subcontractor, by type: what recurs, and why.</li>
+      <li><b>Incidents</b> — investigations completed, notices (CIR/CIN/NCN) status, sign-offs.</li>
+      <li><b>Commentary</b> — what the numbers mean; risks to the contract; the recommended next audit focus.</li>
+      <li><b>Presentation</b> — formally presented monthly or as directed — the report is spoken, not just filed.</li>
+    </ol>
+
+    <h3 style="margin:24px 0 0;font-size:15px">3 · Document control — the SEEK ad's first duty</h3>
+    <div class="grid g2">
+      <div class="card"><h3>Registers</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">One source of truth per record type — no register that disagrees with another</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Naming conventions, version control, retention rules</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Your evidence: 200+ procedures migrated to SharePoint (findability +40%); 150+ manuals consolidated into one BMS (+50%)</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Evidence packs</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Built as the audit year progresses, not the week before the auditor arrives</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Internal and external audit schedules coordinated with evidence checklists</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Your evidence: multi-standard audit readiness achieved NIL non-conformance across ISO 9001/13485/55001</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pattern"><span class="p-icon">🧠</span><div class="p-body"><b>The pattern that proves you've done it:</b> "Every stage of the loop has a named document and a named owner — the inspection record feeds the BIF, the BIF feeds the monthly trend, the trend feeds the audit focus. My compliance folder answers any client or auditor in days because nothing lives in someone's head."</div></div>
+  </section>
+
+  <!-- ============ PANEL: SCENARIO ROUTER ============ -->
+  <section class="panel" role="tabpanel" id="panel-router" hidden>
+    <h2>🧩 Scenario Router — the auditor's playbook</h2>
+    <p class="subhead">Click a scenario to see the auditor's path. Where judgment genuinely varies, the router says <b>check</b> — in an interview, knowing what to check beats guessing.</p>
+    <div class="router">
+      <div class="products" role="tablist" aria-label="Scenarios">
+        <button class="prod" role="tab" aria-selected="true" data-prod="leak"><span class="p-name">Water damage reported in a unit</span><span class="p-fam">RESPONSIVE MAINTENANCE · TENANT</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="claim"><span class="p-name">Subcontractor claims payment — work incomplete</span><span class="p-fam">CLAIM VERIFICATION · COMMERCIAL</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="fall"><span class="p-name">No harness at height on a roof repair</span><span class="p-fam">ZERO HARM · STOP WORK</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="tenant"><span class="p-name">Tenant complains about repair quality</span><span class="p-fam">TENANT COMMS · VERIFY</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="ncn"><span class="p-name">Homes NSW raises an NCN</span><span class="p-fam">CLIENT NOTICE · PRIORITY</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="swms"><span class="p-name">SWMS is a generic template at sign-up</span><span class="p-fam">SIGN-UP GATE · SAFEWORK NSW</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="gas"><span class="p-name">Gas smell reported in a unit</span><span class="p-fam">EMERGENCY · DANGEROUS INCIDENT</span></button>
+        <button class="prod" role="tab" aria-selected="false" data-prod="asbestos"><span class="p-name">Asbestos suspected mid-upgrade</span><span class="p-fam">STOP WORK · LICENSED REMOVAL</span></button>
+      </div>
+      <div class="routebox" id="routebox"><!-- filled by JS --></div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL: QUIZ ============ -->
+  <section class="panel" role="tabpanel" id="panel-quiz" hidden>
+    <h2>✅ Route the scenario — quiz</h2>
+    <p class="subhead">Ten questions from the PD and the interview playbook. Answer, read the reasoning, watch the score. Restart any time.</p>
+    <div class="quiz">
+      <div class="scorebar" id="scorebar">Score: 0 / 0</div>
+      <div class="q-card" id="qcard"><!-- filled by JS --></div>
+      <button class="restart" id="restart" hidden>↺ Restart quiz</button>
+    </div>
+  </section>
+
+  <!-- ============ PANEL: ACRONYMS ============ -->
+  <section class="panel" role="tabpanel" id="panel-acro" hidden>
+    <h2>🔤 Acronyms — the full alphabet of the job</h2>
+    <p class="subhead">Every acronym used across this trainer, the War Room and the two role documents. Learn the Downer-specific ones cold — using them correctly is the fastest credibility signal in the room.</p>
+    <div class="acrogroup">The contract &amp; team</div>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">Homes NSW</span><div class="def">The NSW government housing agency (launched 2024, consolidating the LAHC housing portfolio) — the client on this contract.</div></div>
+      <div class="acro"><span class="term">LAHC</span><div class="def">Land and Housing Corporation — the former name still used inside the PD ("Hub/LAHC"). Same client, old name.</div></div>
+      <div class="acro"><span class="term">DCJ</span><div class="def">Department of Communities and Justice — the NSW department Homes NSW sits under.</div></div>
+      <div class="acro"><span class="term">SDP</span><div class="def">Assurance &amp; Service Delivery Partner Manager — the PD's reporting line; the contract-side quality leadership.</div></div>
+      <div class="acro"><span class="term">DSS</span><div class="def">Delivery Service Supervisors — the field supervisors the auditor advises and works alongside.</div></div>
+      <div class="acro"><span class="term">WMS</span><div class="def">Work Management System — every inspection, investigation and communication is saved here against the Work Order.</div></div>
+      <div class="acro"><span class="term">TDS</span><div class="def">The Downer Standard — Downer's integrated management system (ISO 9001 + 14001 + 27001 + 45001, one certification).</div></div>
+      <div class="acro"><span class="term">BIF</span><div class="def">Business Improvement Form — Downer's name for the non-conformance record raised at inspections.</div></div>
+      <div class="acro"><span class="term">CIR / CIN / NCN</span><div class="def">Homes NSW's client notice types — the PD makes completing and signing them off an explicit auditor duty. Confirm exact expansions at induction.</div></div>
+      <div class="acro"><span class="term">KPI</span><div class="def">Key Performance Indicator — the contract measures inspection and audit activity against KPI targets per zone.</div></div>
+      <div class="acro"><span class="term">Maven</span><div class="def">"Team Maven Leader" appears in the PD's working relationships — an internal team structure; ask what it covers in your zone.</div></div>
+    </div>
+    <div class="acrogroup">Quality &amp; audit</div>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">QMS</span><div class="def">Quality Management System — ISO 9001 is the backbone; the TDS is Downer's instance.</div></div>
+      <div class="acro"><span class="term">DG-QA-PN001</span><div class="def">The TDS document for the 10 Quality Principles — named in the PD's Delivery (Quality) KRA. Read it in week one.</div></div>
+      <div class="acro"><span class="term">NCR</span><div class="def">Non-Conformance Report — the generic term; Downer's version is the BIF.</div></div>
+      <div class="acro"><span class="term">CAPA</span><div class="def">Corrective and Preventive Action — the closed loop from root cause to permanent fix.</div></div>
+      <div class="acro"><span class="term">RCA</span><div class="def">Root Cause Analysis — 5 Whys, Fishbone, Fault Tree — the investigation's engine.</div></div>
+      <div class="acro"><span class="term">OFI</span><div class="def">Opportunity For Improvement — an audit finding that isn't a nonconformity but should be pursued.</div></div>
+      <div class="acro"><span class="term">PDCA</span><div class="def">Plan-Do-Check-Act — the improvement cycle ISO 9001 is built on.</div></div>
+      <div class="acro"><span class="term">ISO 19011</span><div class="def">Guidelines for auditing management systems — the audit-training standard.</div></div>
+      <div class="acro"><span class="term">ISO 17020</span><div class="def">Inspection body competence — the inspection-side standard (on your resume).</div></div>
+      <div class="acro"><span class="term">ISO 31000</span><div class="def">Risk management principles — risk-based audit prioritisation.</div></div>
+    </div>
+    <div class="acrogroup">Safety &amp; Zero Harm</div>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">Zero Harm</span><div class="def">Downer's safety brand — integrated into the TDS under ISO 45001, with Cardinal Rules for critical risks.</div></div>
+      <div class="acro"><span class="term">WHS</span><div class="def">Work Health and Safety — the WHS Act 2011 (NSW) and WHS Regulation 2017 (NSW) are the legal frame.</div></div>
+      <div class="acro"><span class="term">SWMS</span><div class="def">Safe Work Method Statement — required for high-risk construction work (Reg 291 list); reviewed at sign-up per the PD.</div></div>
+      <div class="acro"><span class="term">SafeWork NSW</span><div class="def">The NSW WHS regulator — the PD says "WorkCover requirements"; WorkCover NSW became SafeWork NSW in 2015.</div></div>
+      <div class="acro"><span class="term">ICAM</span><div class="def">Incident Cause Analysis Method — the standard AU incident-investigation methodology (organisational factors, not blame).</div></div>
+      <div class="acro"><span class="term">JSA</span><div class="def">Job Safety Analysis — the task-level hazard check used alongside or instead of a SWMS for lower-risk work.</div></div>
+      <div class="acro"><span class="term">HAZCHEM</span><div class="def">Hazardous chemicals — WHS Reg Part 7.1; you're trained in HAZCHEM control (UGL 2019).</div></div>
+      <div class="acro"><span class="term">PPE</span><div class="def">Personal Protective Equipment — the LAST control in the hierarchy, never the first.</div></div>
+      <div class="acro"><span class="term">RCD</span><div class="def">Residual Current Device — safety switches on sites; part of electrical verification.</div></div>
+      <div class="acro"><span class="term">COC</span><div class="def">Code of Conduct — one of the three incident types the auditor investigates (with OHS and Environmental).</div></div>
+    </div>
+    <div class="acrogroup">Standards &amp; reporting</div>
+    <div class="acrogrid">
+      <div class="acro"><span class="term">NCC</span><div class="def">National Construction Code — the umbrella over all building work.</div></div>
+      <div class="acro"><span class="term">HBA</span><div class="def">Home Building Act 1989 (NSW) — licensing, contracts, statutory warranties for residential building work.</div></div>
+      <div class="acro"><span class="term">DIFOT</span><div class="def">Delivered In Full, On Time — a logistics KPI you lifted from 85% to 100% at Sydney Trains.</div></div>
+      <div class="acro"><span class="term">OEE</span><div class="def">Overall Equipment Effectiveness — your manufacturing KPI (86% at Medtronic).</div></div>
+      <div class="acro"><span class="term">NPS</span><div class="def">Net Promoter Score — customer/tenant sentiment; your NLP sentiment dashboards tracked it.</div></div>
+      <div class="acro"><span class="term">SPC</span><div class="def">Statistical Process Control — control charts; your Cp/Cpk framework improved capability 22%.</div></div>
+      <div class="acro"><span class="term">ITP</span><div class="def">Inspection and Test Plan — you standardised ITPs across 50+ construction vendors, cutting discrepancies 40%.</div></div>
+      <div class="acro"><span class="term">AS/NZS 3000 / 3760 / 5601.1 / 3500 / 3740 / 1851 / 3786</span><div class="def">The trade rulebooks: wiring, test &amp; tag, gas, plumbing, waterproofing, fire servicing, smoke alarms — see the Trade Standards tab.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL: MY EXPERIENCE ============ -->
+  <section class="panel" role="tabpanel" id="panel-exp" hidden>
+    <h2>💼 My experience — where the auditor's loop showed up in my past work</h2>
+    <p class="subhead">The same loop followed me across rail, manufacturing, government and construction. Each employer below maps to the four fronts of this job — the through-line is always: inspect to the standard → raise the non-conformance → close with owner + date → report the trend.</p>
+
+    <h3 style="margin:22px 0 2px;font-size:17px">🚆 Sydney Trains – UGL Unipart (2019–2020) — rail asset maintenance</h3>
+    <div class="grid g3">
+      <div class="card lv l3"><span class="lv-n" style="color:var(--eess)">🛠️ Inspections &amp; assets</span><h3>Maintenance supply chain quality</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Mapped and optimised 20+ warehousing workflows — lead times −15%</li>
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">DIFOT 85% → 100% via standardised SOPs and Lean practices</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Asset maintenance world — ISO 55001 on the resume</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n" style="color:var(--fire)">🦺 WHS</span><h3>HAZCHEM training</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Trained in Workplace Health and Safety HAZCHEM control at UGL (2019)</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">WHS registers — hazards, incidents, safety reviews</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">The rail Zero Harm cousin — same discipline, same registers</li>
+        </ul>
+      </div>
+      <div class="card lv l1"><span class="lv-n" style="color:var(--gems)">📈 Reporting</span><h3>Automated supply-chain reporting</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Automated reporting → 20% faster proactive issue resolution</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Coached 50+ staff on Lean tools — the training muscle the PD asks for</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 2px;font-size:17px">🏭 Stramit – Fletchers (2022–2023) — the Zero Harm proof</h3>
+    <div class="grid g3">
+      <div class="card lv l3"><span class="lv-n" style="color:var(--fire)">🦺 Zero Harm culture</span><h3>Achieved across metro &amp; regional sites</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Zero-accident culture achieved across metro and regional NSW sites</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Safety registers aligned to ISO 45001</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">The exact phrase the PD uses — "Zero Harm" — was my daily language</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n" style="color:var(--eess)">🛠️ Inspection discipline</span><h3>Go/no-go sampling</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Established a go/no-go statistical sampling framework for consistent quality decisions</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">The decision protocol behind fast, fair inspections</li>
+        </ul>
+      </div>
+      <div class="card lv l1"><span class="lv-n" style="color:var(--gems)">📈 Results</span><h3>$1M + $300K/region</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">$1M national savings year one via Lean initiatives</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">+40% productivity (90→126 pieces/person/hour) via Kanban</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 2px;font-size:17px">🏛️ Aurion–FSPR &amp; government departments (2015–2024) — the audit core</h3>
+    <div class="grid g3">
+      <div class="card lv l3"><span class="lv-n" style="color:var(--brand)">🔍 Third-party audits</span><h3>ISO 9001 · 14001 · 45001</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Conducted third-party audits across management systems — NIL non-conformance targets</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">CAPA processes to closure — the BIF lifecycle's cousin</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Audit reports with actionable insights for stakeholders</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n" style="color:var(--gems)">🏗️ Construction QMS</span><h3>ITPs across 50+ vendors</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Standardised Inspection and Test Plans across 50+ construction vendors — discrepancies −40%</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Multi-phase construction QMS in 8 months — rework −30%</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">ISO 9001 across 14 government departments — NIL non-conformance</li>
+        </ul>
+      </div>
+      <div class="card lv l1"><span class="lv-n" style="color:var(--eess)">🏚️ Facilities &amp; tenants</span><h3>The adjacent world</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">NSW Health sterile-processing facilities — procedures + training</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">DoJ corrective services infrastructure — As-Is/To-Be mapping</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">NPS/sentiment dashboards — the tenant-customer muscle</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 2px;font-size:17px">🏥 Medtronic – Covidien – L&amp;T (2007–2014) — the discipline that transfers</h3>
+    <div class="grid g3">
+      <div class="card lv l3"><span class="lv-n" style="color:var(--brand)">📋 Medical QMS</span><h3>ISO 13485 · 21 CFR · ISO 14971</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Audit-ready QMS under continuous external inspection readiness</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Risk management driving CAPA — the same skeleton as BIF→CAPA</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Regulator answerability after launch — the same muscle as Homes NSW notices</li>
+        </ul>
+      </div>
+      <div class="card lv l2"><span class="lv-n" style="color:var(--gems)">📈 The numbers</span><h3>$225M · OEE 86%</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">$225M cost savings via Lean Six Sigma + SPC</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Defects 7% → &lt;1% in six months; OEE to 86%</li>
+        </ul>
+      </div>
+      <div class="card lv l1"><span class="lv-n" style="color:var(--eess)">🔁 What transfers</span><h3>Same skeleton, different organs</h3>
+        <ul style="margin:6px 0 0;padding-left:16px">
+          <li style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">"Inspect, raise, close, trend" — identical to the auditor's loop</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">Change control where compliance dies — in housing, the SWMS and the spec</li>
+          <li style="font-size:12.5px;color:var(--ink-2)">FDA audits ↔ Homes NSW notices — same answerability muscle</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pattern"><span class="p-icon">🧠</span><div class="p-body"><b>The through-line for the interview:</b> "Rail taught me asset maintenance and HAZCHEM, Stramit taught me Zero Harm culture on real sites, government taught me third-party audits and NIL non-conformances, construction taught me ITPs and subcontractor governance, and medical devices taught me the classify-inspect-close discipline. At Downer all of it meets on one contract — that's why this role fits."</div></div>
+  </section>
+
+  <!-- ============ PANEL: CHEAT SHEET ============ -->
+  <section class="panel" role="tabpanel" id="panel-cheat" hidden>
+    <h2>📚 Cheat sheet</h2>
+    <p class="subhead">Six checkpoints, one master table, and the ordering traps. For the 60 seconds before the interview.</p>
+    <h3 style="margin:18px 0 0;font-size:15px">The six checkpoints</h3>
+    <ol class="checklist">
+      <li><b>Plan to KPI.</b> Pre-inspections meet Contract KPI minimums; post-inspections on ALL pre-inspections; WIP/post to zone targets.</li>
+      <li><b>Inspect to the standard.</b> Workmanship (trade standard), site safety (SWMS), contractor compliance (licence + contract).</li>
+      <li><b>Raise a BIF for every non-conformance.</b> Specifics, evidence, owner, due date — Downer's improvement framing, not blame.</li>
+      <li><b>Close with verify.</b> Corrective AND preventive actions; escalate in writing before the due date; verify on site.</li>
+      <li><b>Record in WMS.</b> Against the Work Order, updated as actions complete — if it's not in WMS, it didn't happen.</li>
+      <li><b>Report &amp; trend.</b> Monthly report with commentary + trend analysis, formally presented, feeding the next audit focus.</li>
+    </ol>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Dimension</th><th>🛠️ Inspection</th><th>🔍 Audit</th><th>🚨 Incident investigation</th></tr></thead>
+        <tbody>
+          <tr><td><b>Examines</b></td><td>The work — a site, workmanship, a claim</td><td>The system — a subcontractor's or process's controls</td><td>The event — what happened and why</td></tr>
+          <tr><td><b>Trigger</b></td><td>The KPI schedule + monthly audit focus</td><td>The monthly audit focus / direction</td><td>An OHS, Code of Conduct or Environmental incident</td></tr>
+          <tr><td><b>Tool</b></td><td>ITPs, checklists, trade standards</td><td>ISO 19011 lifecycle, checklists, interviews</td><td>5 Whys, Fishbone, ICAM</td></tr>
+          <tr><td><b>Output</b></td><td>Conforming / BIF raised / claim verdict</td><td>Conformity / nonconformity / OFI findings</td><td>Report with corrective + preventive actions</td></tr>
+          <tr><td><b>Where it lives</b></td><td>WMS against the Work Order</td><td>Audit records + registers</td><td>WMS against the Work Order + distributed report</td></tr>
+          <tr><td><b>Loop closes</b></td><td>Post-inspection verifies closure</td><td>Follow-up audit verifies actions</td><td>Sign-off + tenant advised + trend logged</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid g2">
+      <div class="pattern fire"><span class="p-icon">🚨</span><div class="p-body"><b>Safety first</b> — an incident: make safe → notify → preserve → investigate. Never document before people are safe.</div></div>
+      <div class="pattern eess"><span class="p-icon">📝</span><div class="p-body"><b>Escalate early</b> — anything threatening a due date is escalated in writing before the due date, to the SDP Manager and Regional Manager.</div></div>
+    </div>
+    <div class="pattern warn"><span class="p-icon">⚠️</span><div class="p-body"><b>The three things interviewers probe:</b> ① the ordering — make safe before documenting, escalate before the due date, verify before closure. ② the WMS discipline — records against the Work Order, not in notebooks. ③ the tenant — closures aren't closed until the tenant is advised. Get those three right and the rest is detail.</div></div>
+  </section>
+
+  <footer class="footer">
+    <p>Built as a study companion for the Quality Assurance Coordinator / Quality Auditor role — Downer, Homes NSW maintenance contract, Sydney NSW. Content aligned with the two role documents (SEEK ad + internal PD DG-HR-FM005) and the War Room prep notes.</p>
+    <p class="src">Sources: Downer Homes NSW award (NZX announcement, 27 Jun 2024) · downergroup.com (The Downer Standard, Zero Harm) · SEEK job 95378058 · Downer PD DG-HR-FM005 v1.4 · legislation.nsw.gov.au (WHS Act 2011, WHS Regulation 2017) · safework.nsw.gov.au · ISO 19011:2018 · ISO 9001:2015 · AS/NZS trade standards</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  /* ---------- tabs ---------- */
+  var tabs = $$(".tab");
+  var panels = $$(".panel");
+  function showTab(id){
+    tabs.forEach(function(t){ t.setAttribute("aria-selected", t.getAttribute("data-tab") === id ? "true" : "false"); });
+    panels.forEach(function(p){ p.hidden = (p.id !== "panel-" + id); });
+    try{ localStorage.setItem("audit-bench-tab", id); }catch(e){}
+  }
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){ showTab(t.getAttribute("data-tab")); });
+  });
+  try{
+    var saved = localStorage.getItem("audit-bench-tab");
+    if(saved && document.getElementById("panel-" + saved)) showTab(saved);
+  }catch(e){}
+
+  /* ---------- stage drill-downs ---------- */
+  $$(".stepper").forEach(function(stepper){
+    var stages = stepper.querySelectorAll(".stage");
+    function select(id){
+      stages.forEach(function(s){ s.setAttribute("aria-selected", s.getAttribute("data-stage") === id ? "true" : "false"); });
+      $$(".stagedetail[id^='stage-']").forEach(function(d){
+        d.hidden = (d.id !== "stage-" + id);
+      });
+    }
+    stages.forEach(function(s){
+      s.addEventListener("click", function(){ select(s.getAttribute("data-stage")); });
+    });
+  });
+
+  /* ---------- scenario router ---------- */
+  var ROUTES = {
+    leak: {
+      name: "Water damage reported in a unit", fam: "RESPONSIVE MAINTENANCE · TENANT",
+      verdicts: [
+        ["Inspection", "yes", "priority — scope the damage"],
+        ["BIF", "check", "only if workmanship is the cause"],
+        ["Tenant comms", "yes", "advise of findings & outcomes"]
+      ],
+      h: "Verify before you blame",
+      p: "A leak has many causes — tenant behaviour, failing roof, prior contractor workmanship. The auditor's job is evidence, not assumption: inspect to the trade standard (roofing, plumbing, waterproofing — AS 3740 in wet areas), determine the cause, and only then does a BIF apply if a previous repair or subcontractor work is non-conforming. Latent defects from prior repairs are the classic pattern — the trend data is where the value is.",
+      steps: [
+        "Open the Work Order — check repair history for the unit in WMS",
+        "Inspect the cause against the relevant trade standard (plumbing AS/NZS 3500, waterproofing AS 3740, roofing)",
+        "If prior workmanship is the cause: raise a BIF with evidence and assign the corrective action",
+        "If a new defect: scope the repair, verify the contractor's work on completion (post-inspection)",
+        "Update WMS, advise the tenant of the outcome, log the trend"
+      ]
+    },
+    claim: {
+      name: "Subcontractor claims payment — work incomplete", fam: "CLAIM VERIFICATION · COMMERCIAL",
+      verdicts: [
+        ["Inspection", "yes", "verify against the record"],
+        ["BIF", "yes", "non-conforming work"],
+        ["Payment", "no", "hold until conforming"]
+      ],
+      h: "The claim is verified against the inspection record",
+      p: "Claim verification is a named PD duty: work complete, conforming to the ITP and scope, defects closed, evidence attached. The pre-inspection is the evidence base — a claim that fails verification triggers a BIF, and payment waits for conforming work. You standardised ITPs across 50+ construction vendors (discrepancies −40%), so this exact loop is your home ground.",
+      steps: [
+        "Pull the inspection record for the Work Order from WMS",
+        "Verify scope completion, ITP conformity and defect status on site",
+        "Raise a BIF for every non-conformance found — with evidence",
+        "Communicate the verdict to the subcontractor and the DSS; payment follows verification",
+        "Post-inspect after rectification, then release the claim"
+      ]
+    },
+    fall: {
+      name: "No harness at height on a roof repair", fam: "ZERO HARM · STOP WORK",
+      verdicts: [
+        ["Stop work", "yes", "make safe first"],
+        ["Incident report", "yes", "Zero Harm + WMS"],
+        ["Investigation", "yes", "root cause + preventive"]
+      ],
+      h: "Make safe first — the ordering trap, answered correctly",
+      p: "Working at height above 2 m is high-risk construction work (WHS Reg 291): a SWMS is mandatory, and a worker on a roof with no fall protection is an immediate stop-work. Make safe, notify the supervisor, report through WMS and the Zero Harm line, then investigate: why wasn't the SWMS followed? The preventive action targets the system — supervision, induction, verification — not just the individual.",
+      steps: [
+        "Stop the work and get the worker down safely — make safe before documenting",
+        "Notify the site supervisor immediately; report the incident in WMS against the Work Order",
+        "Investigate: SWMS on site? Followed? Supervised? (5 Whys / ICAM)",
+        "Corrective AND preventive actions with owners and due dates; escalate in writing if delays threaten",
+        "Distribute the completed report (Contract Manager, SDP Manager, Regional Managers); log the trend"
+      ]
+    },
+    tenant: {
+      name: "Tenant complains about repair quality", fam: "TENANT COMMS · VERIFY",
+      verdicts: [
+        ["Inspection", "yes", "verify against the standard"],
+        ["BIF", "check", "if the complaint is founded"],
+        ["Tenant comms", "yes", "outcome must be advised"]
+      ],
+      h: "The tenant is a stakeholder in the loop",
+      p: "The PD makes tenant communication an explicit duty: tenants are advised of investigation outcomes where they're involved. Treat the complaint as an inspection trigger: verify against the trade standard and the Work Order, and tell the tenant the outcome either way. A founded complaint becomes a BIF; a pattern of complaints becomes a trend in the monthly report.",
+      steps: [
+        "Log the complaint against the unit's Work Order in WMS",
+        "Inspect the reported issue against the trade standard (evidence, photos)",
+        "If founded: BIF with owner + due date; if not: document the verification and explain to the tenant",
+        "Advise the tenant of the outcome — the PD's explicit duty",
+        "Trend it: recurring complaint types feed the monthly report and audit focus"
+      ]
+    },
+    ncn: {
+      name: "Homes NSW raises an NCN", fam: "CLIENT NOTICE · PRIORITY",
+      verdicts: [
+        ["Priority", "yes", "treat as a workstream"],
+        ["Sign-off", "yes", "PD names CIR/CIN/NCN completion"],
+        ["Trend", "yes", "pattern feeds audit focus"]
+      ],
+      h: "A client notice is a priority workstream, not a form",
+      p: "The PD makes completing and signing off Homes NSW's CIR, CIN and NCN notices an explicit auditor duty. Treat an NCN as urgent: investigate to root cause, complete the report by the requested completion date, capture corrective and preventive actions, save everything in WMS against the Work Order, distribute to the stakeholders — and then look for the pattern: one NCN is a case, three are a pattern the audit focus should chase.",
+      steps: [
+        "Acknowledge and log the NCN against the Work Order in WMS",
+        "Investigate to root cause — 5 Whys / Fishbone / ICAM with the involved team",
+        "Corrective + preventive actions with owners and due dates, followed to completion",
+        "Complete the report by the requested date; distribute to Contract Manager, SDP Manager, Regional Managers, Homes NSW (where directed)",
+        "Sign off; advise the tenant where involved; feed the trend into the monthly report"
+      ]
+    },
+    swms: {
+      name: "SWMS is a generic template at sign-up", fam: "SIGN-UP GATE · SAFEWORK NSW",
+      verdicts: [
+        ["Authorise", "no", "not until job-specific"],
+        ["BIF", "check", "if the subcontractor is already working"],
+        ["Induction", "yes", "pair with training"]
+      ],
+      h: "The sign-up gate — the PD's first line of defence",
+      p: "The PD requires SWMS review at sign-up, authorising only if they meet all WorkCover/SafeWork NSW requirements. A generic template fails Reg 299: the SWMS must be job-specific — the high-risk work, the hazards, the controls, how the controls are implemented. Return it with the specific gaps, support them to fix it, authorise only when compliant — and pair it with the induction on contract requirements and WMS.",
+      steps: [
+        "Check the SWMS against the job: high-risk work covered? Controls specific? Current?",
+        "Return with the specific gaps identified — not 'fix it', but 'here's what's missing'",
+        "Verify the revised SWMS meets SafeWork NSW requirements (Reg 299 content)",
+        "Authorise only when compliant; record the review in the sign-up file",
+        "Deliver the induction on contract requirements and WMS; verify on site that the SWMS is actually followed"
+      ]
+    },
+    gas: {
+      name: "Gas smell reported in a unit", fam: "EMERGENCY · DANGEROUS INCIDENT",
+      verdicts: [
+        ["Make safe", "yes", "isolate + evacuate as needed"],
+        ["Notify", "yes", "emergency services + SafeWork NSW"],
+        ["Investigate", "yes", "after the scene is safe"]
+      ],
+      h: "An emergency, handled like an auditor",
+      p: "A gas smell is a potential dangerous incident. First: make safe — evacuate as required, isolate the gas, emergency services. A gas leak that poses an immediate risk is a notifiable dangerous incident under WHS Act ss 35–38 — notify SafeWork NSW immediately and preserve the scene. Then the auditor's loop resumes: investigate (gasfitter's evidence, AS/NZS 5601.1 compliance, prior work history in WMS), corrective and preventive actions, tenant advised, trend logged.",
+      steps: [
+        "Make safe: evacuate as required, isolate the gas supply, call emergency services",
+        "Notify SafeWork NSW immediately if notifiable (dangerous incident) and preserve the scene",
+        "After the scene is safe: investigate — prior gas work history in WMS, AS/NZS 5601.1 compliance, licensed gasfitter evidence",
+        "Corrective + preventive actions with owners and due dates; escalate in writing if delays threaten",
+        "Complete the report, distribute, advise the tenant, log the trend"
+      ]
+    },
+    asbestos: {
+      name: "Asbestos suspected mid-upgrade", fam: "STOP WORK · LICENSED REMOVAL",
+      verdicts: [
+        ["Stop work", "yes", "immediately"],
+        ["Assess", "yes", "competent person / licensed assessor"],
+        ["BIF", "check", "if process failed"]
+      ],
+      h: "Pre-2003 homes — the classic stop-work trigger",
+      p: "Suspected asbestos means immediate stop-work: isolate the area, no disturbance, and bring in a competent person to assess. Removal is licensed work under WHS Reg Chapter 8 — a licensed asbestos removalist, with air monitoring and clearance certificates. The auditor's angle: was the asbestos risk identified in the SWMS and scope before the job started? If the process failed, the BIF targets the planning system, not the crew.",
+      steps: [
+        "Stop work immediately; isolate the area; no disturbance of suspect material",
+        "Engage a competent person / licensed assessor to confirm and scope the material",
+        "Licensed asbestos removalist performs the removal; air monitoring and clearance certificate obtained",
+        "Investigate: was the asbestos risk in the SWMS and scope? If not — BIF on the planning process",
+        "Record in WMS, update the unit's asbestos register, advise the tenant, log the trend"
+      ]
+    }
+  };
+  var prods = $$(".prod");
+  var routebox = $("#routebox");
+  function renderRoute(key){
+    var r = ROUTES[key];
+    var pills = r.verdicts.map(function(v){
+      return '<span class="vpill ' + v[1] + '">' + v[0] + " · " + v[2] + "</span>";
+    }).join("");
+    var steps = r.steps.map(function(s){ return "<li>" + s + "</li>"; }).join("");
+    routebox.innerHTML =
+      "<h4>" + r.name + "</h4>" +
+      '<div class="r-fam">' + r.fam + "</div>" +
+      "<h5>Verdicts</h5><div class=\"verdicts\">" + pills + "</div>" +
+      "<h5>The auditor's story</h5><p><b>" + r.h + ".</b> " + r.p + "</p>" +
+      "<h5>Path</h5><ol class=\"steps\">" + steps + "</ol>";
+  }
+  prods.forEach(function(p){
+    p.addEventListener("click", function(){
+      prods.forEach(function(x){ x.setAttribute("aria-selected", "false"); });
+      p.setAttribute("aria-selected", "true");
+      renderRoute(p.getAttribute("data-prod"));
+    });
+  });
+  renderRoute("leak");
+
+  /* ---------- quiz ---------- */
+  var QUIZ = [
+    {
+      q: "You find a serious safety issue during a pre-inspection. Your first move?",
+      opts: [
+        "Finish the inspection, then report",
+        "Take photos first for evidence",
+        "Make it safe — stop or isolate the work",
+        "Call the subcontractor's office"
+      ],
+      a: 2,
+      why: "Making safe comes before documenting. The ordering trap: make safe → notify → preserve → investigate. Photos and calls come after people are safe."
+    },
+    {
+      q: "A BIF's corrective action is about to go overdue. What does the PD require?",
+      opts: [
+        "Let it run a week and see",
+        "Escalate in writing before the due date to the SDP Manager and Regional Manager",
+        "Close the BIF and raise a new one",
+        "Wait for the monthly report to raise it"
+      ],
+      a: 1,
+      why: "The PD is explicit: 'Escalate in writing all matters which may cause a delay … prior to the due date.' The writing and the timing are both tested."
+    },
+    {
+      q: "Where do inspection and investigation records live?",
+      opts: [
+        "In the auditor's notebook",
+        "In the monthly report only",
+        "In WMS against the specific Work Order",
+        "In a shared drive"
+      ],
+      a: 2,
+      why: "The PD: 'Ensure all completed investigation & inspection reports, details and communications are saved into WMS against the specific Work Order.' The golden rule: if it's not in WMS, it didn't happen."
+    },
+    {
+      q: "A subcontractor's SWMS is a generic template. What happens at sign-up?",
+      opts: [
+        "Authorise it — a SWMS is a SWMS",
+        "Return it with the specific gaps; authorise only when it meets SafeWork NSW requirements",
+        "Authorise with conditions to be checked later",
+        "Decline the subcontractor permanently"
+      ],
+      a: 1,
+      why: "The PD: 'Review Subcontractor SWMS at signup and authorizing if they meet all WorkCover requirements.' A generic template fails Reg 299's job-specificity — the fix is specific feedback, then the induction."
+    },
+    {
+      q: "What must an incident investigation report include?",
+      opts: [
+        "Who is to blame",
+        "Corrective AND preventive actions with owners and due dates",
+        "Only what happened",
+        "A cost estimate first"
+      ],
+      a: 1,
+      why: "The PD: 'documenting the required corrective and preventive actions and following up of those actions to completion.' The preventive action is where Zero Harm actually happens."
+    },
+    {
+      q: "Who receives completed investigation reports?",
+      opts: [
+        "The tenant only",
+        "Contract Manager · SDP Manager · Regional Managers · Homes NSW (where directed) · Helpdesk (where relevant)",
+        "The subcontractor only",
+        "Nobody — they stay in WMS"
+      ],
+      a: 1,
+      why: "The PD names the distribution list. Quoting it in the interview proves you read the document — the detail that separates researched from rehearsed."
+    },
+    {
+      q: "A tenant was involved in an incident. What happens at the end of the investigation?",
+      opts: [
+        "Nothing — tenants aren't stakeholders",
+        "The tenant is advised of the investigation outcome",
+        "Only Homes NSW is told",
+        "The tenant finds out from the subcontractor"
+      ],
+      a: 1,
+      why: "The PD: 'Advise tenants of investigation outcomes (where tenants are involved in an incident).' Closures aren't closed until the people are told."
+    },
+    {
+      q: "What makes the monthly Inspection & Auditing Report valuable?",
+      opts: [
+        "The list of inspections completed",
+        "The commentary and trend analysis of non-conformances, formally presented",
+        "The formatting",
+        "The length"
+      ],
+      a: 1,
+      why: "The PD names 'commentary and trend analysis of non-conformances raised' and 'formally present' — the trends are what turn the report into prevention and feed the next audit focus."
+    },
+    {
+      q: "Electrical work in a unit must comply with which rulebook?",
+      opts: [
+        "AS/NZS 3500",
+        "AS/NZS 3000 — the Wiring Rules",
+        "AS 3740",
+        "AS 1851"
+      ],
+      a: 1,
+      why: "AS/NZS 3000 governs electrical installations (3500 = plumbing, 3740 = waterproofing, 1851 = fire servicing). The auditor knows which standard each trade answers to."
+    },
+    {
+      q: "Homes NSW raises a CIR, CIN or NCN. What's the auditor's obligation?",
+      opts: [
+        "Forward it to someone else",
+        "Investigate to root cause, complete by the requested date, and sign off",
+        "File it in WMS and move on",
+        "Wait for the quarterly review"
+      ],
+      a: 1,
+      why: "The PD: 'Completion and sign-off of all COC, Zero Harm and Environmental related CIR, CIN & NCNs raised by Homes NSW.' Client notices are priority workstreams, and the auditor owns their closure."
+    }
+  ];
+  var qi = 0, score = 0;
+  var qcard = $("#qcard"), scorebar = $("#scorebar"), restartBtn = $("#restart");
+  function renderQ(){
+    if(qi >= QUIZ.length){
+      var msg = score === QUIZ.length
+        ? "Perfect — you're ready to talk the auditor's loop with the SDP Manager."
+        : (score >= 7 ? "Solid. Revisit the missed ones in the module tabs." : "Run the module tabs again, then retry.");
+      qcard.innerHTML = "<h3>" + msg + "</h3><p style='font-size:14px;color:var(--ink-2)'>Final score: <b>" + score + " / " + QUIZ.length + "</b></p>";
+      restartBtn.hidden = false;
+      scorebar.textContent = "Score: " + score + " / " + QUIZ.length;
+      return;
+    }
+    var item = QUIZ[qi];
+    var html = '<div class="q-n">Question ' + (qi + 1) + " of " + QUIZ.length + "</div><h3>" + item.q + "</h3><div class=\"opts\">";
+    item.opts.forEach(function(o, i){
+      html += '<button class="opt" data-i="' + i + '">' + o + "</button>";
+    });
+    html += "</div><div class=\"feedback\" id=\"fb\" hidden></div>";
+    qcard.innerHTML = html;
+    scorebar.textContent = "Score: " + score + " / " + qi;
+    restartBtn.hidden = true;
+    qcard.querySelectorAll(".opt").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var i = parseInt(btn.getAttribute("data-i"), 10);
+        var fb = $("#fb");
+        qcard.querySelectorAll(".opt").forEach(function(b){
+          b.setAttribute("aria-disabled", "true");
+          if(parseInt(b.getAttribute("data-i"), 10) === item.a) b.classList.add("right");
+        });
+        if(i === item.a){ score++; }
+        else { btn.classList.add("wrong"); }
+        fb.hidden = false;
+        fb.innerHTML = "<b>" + (i === item.a ? "Correct. " : "Not quite. ") + "</b>" + item.why +
+          ' <button class="opt" style="margin-top:10px;display:inline-block" id="next">Next →</button>';
+        $("#next").addEventListener("click", function(){ qi++; renderQ(); });
+      });
+    });
+  }
+  restartBtn.addEventListener("click", function(){ qi = 0; score = 0; renderQ(); });
+  renderQ();
+})();
+</script>
+</body>
+</html>
